@@ -258,8 +258,7 @@ function xStats(c){
 function xReport(c){
   const cs=classStats(c);
   const rows=cs.ss.map(s=>`<tr><td>${esc(s.n)}</td><td>${s.ab}</td><td>${s.re}</td><td>${fmt(s.v.devoir,'devoir')}</td><td>${fmt(s.v.cahier,'cahier')}</td><td>${fmt(s.v.participation,'participation')}</td><td>${fmt(s.v.comportement,'comportement')}</td><td><b>${s.tot===null?'—':s.tot.toFixed(1)}</b></td></tr>`).join('');
-  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body><h1>تقرير القسم ${esc(c)}</h1><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p><script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}</script>
-</body></html>`;
+  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body><h1>تقرير القسم ${esc(c)}</h1><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p></body></html>`;
   saveFile('تقرير-'+c+'.html',html);
 }
 
@@ -423,5 +422,6 @@ async function init(){
 }
 init();
 </script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}</script>
 </body>
 </html>
