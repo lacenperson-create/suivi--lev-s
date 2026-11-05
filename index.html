@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>متابعة التلاميذ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#075e54">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="التلاميذ">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--g1:#075e54;--g2:#128c7e;--g3:#25d366;--bg:#efeae2;--card:#fff;--text:#111b21;--muted:#667781;--line:#e9edef;--red:#e53935;--amber:#f59e0b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--line:#222d34}}
+:root[data-theme="dark"]{--bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--line:#222d34}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:#d1d7db;color:var(--text);display:flex;justify-content:center}
+#app{width:100%;max-width:520px;height:100%;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.top{background:var(--g1);color:#fff;padding:12px;display:flex;align-items:center;gap:8px;min-height:56px}
+.top h2{margin:0;font-size:18px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top button{background:none;border:0;color:#fff;font-size:24px;cursor:pointer;padding:0 8px}
+.pill{background:#fff3;border-radius:10px;padding:2px 8px;font-size:12px}
+.datebar{background:var(--card);padding:8px 12px;gap:8px;align-items:center;justify-content:center;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap}
+.datebar input{background:var(--bg);color:var(--text);border:0;border-radius:16px;padding:6px 12px;font:inherit}
+.scroll{flex:1;overflow-y:auto;padding-bottom:84px}
+.item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--card);border-bottom:1px solid var(--line);cursor:pointer}
+.av{width:46px;height:46px;border-radius:50%;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;font-size:14px}
+.av.ok{background:var(--g2)} .av.bad{background:var(--red)}
+.grow{flex:1;min-width:0}
+.name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{color:var(--muted);font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:12px;padding:3px 9px;border-radius:10px;color:#fff;white-space:nowrap}
+.b-p{background:var(--g3)} .b-a{background:var(--red)} .b-r{background:var(--amber)}
+.nav{position:absolute;bottom:0;left:0;right:0;background:var(--card);display:flex;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav button{flex:1;background:none;border:0;padding:8px 0;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}
+.nav button.on{color:var(--g2);font-weight:700}
+.nav span{display:block;font-size:20px}
+.fab{position:absolute;bottom:84px;left:16px;width:56px;height:56px;border-radius:50%;background:var(--g2);color:#fff;border:0;font-size:28px;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.empty{text-align:center;color:var(--muted);padding:30px 20px;line-height:1.8}
+.muted{color:var(--muted);font-size:13px}
+.lbl{font-size:13px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+.sec{padding:12px 14px 0}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:10}
+.overlay.open{display:flex}
+.sheet{background:var(--card);width:100%;max-height:90%;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet h3{margin:0 0 4px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:11px 2px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;cursor:pointer}
+.seg button.on{background:var(--g2);color:#fff;border-color:var(--g2)}
+.seg button.on.a{background:var(--red);border-color:var(--red)}
+.seg button.on.r{background:var(--amber);border-color:var(--amber)}
+input,textarea,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px;width:100%}
+textarea{min-height:110px}
+.btn{background:var(--g2);color:#fff;border:0;border-radius:10px;padding:12px;font:inherit;font-weight:600;width:100%;cursor:pointer;margin-top:10px}
+.btn.gh{background:var(--bg);color:var(--text);border:1px solid var(--line)}
+.btn.red{background:var(--red)}
+.chipbtn{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:6px 12px;font:inherit;cursor:pointer;white-space:nowrap}
+.chipbtn.on{background:var(--g2);color:#fff;border-color:var(--g2)}
+.row2{display:flex;gap:8px;margin-top:6px}
+.row2>*{flex:1}
+.ex{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.ex .grow{flex:1}
+.ex button{background:none;border:0;color:var(--red);font-size:18px;cursor:pointer}
+.del{background:none;border:0;color:var(--red);cursor:pointer;font:inherit;font-size:14px}
+.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 14px 0}
+.card2{background:var(--card);border-radius:12px;padding:10px;text-align:center;border:1px solid var(--line)}
+.card2 b{display:block;font-size:20px}
+.card2 span{font-size:12px;color:var(--muted)}
+.barrow{display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--card);border-bottom:1px solid var(--line);font-size:14px}
+.bn{width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{flex:1;height:10px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar div{height:100%;background:var(--g2)} .bar div.bad{background:var(--red)}
+.bv{width:40px;text-align:left;font-weight:600}
+.tablewrap{overflow-x:auto;padding:0 10px}
+table{width:100%;border-collapse:collapse;background:var(--card)}
+th,td{padding:6px;border-bottom:1px solid var(--line);text-align:center;font-size:13px}
+th{color:var(--muted);font-weight:600}
+td input{width:76px;padding:6px}
+td select{width:92px;padding:6px}
+td:first-child{text-align:right;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><button id="back" data-act="back" style="display:none">›</button><h2 id="title"></h2><span id="ro" class="pill" style="display:none">للقراءة فقط</span></div>
+  <div id="datebar" class="datebar" style="display:none"><input type="date" id="dateIn"><button class="chipbtn" id="bulkBtn" data-act="bulkOpen">تسجيل جماعي</button></div>
+  <div id="scroll" class="scroll"></div>
+  <button class="fab" id="fab" data-act="fab">+</button>
+  <div class="nav">
+    <button data-tab="home"><span>💬</span>الأقسام</button>
+    <button data-tab="stats"><span>📊</span>الإحصائيات</button>
+    <button data-tab="export"><span>📤</span>التصدير</button>
+  </div>
+  <div class="overlay" id="ov"><div class="sheet" id="sheet"></div></div>
+</div>
+<input type="file" id="fileIn" accept=".xlsx,.xls,.csv" style="display:none">
+<script>
+const MAX={devoir:20,cahier:20,participation:5,comportement:5};
+const W={devoir:.5,cahier:.2,participation:.15,comportement:.15};
+const TN={devoir:'الفروض',cahier:'تصحيح الدفتر',participation:'المشاركة',comportement:'السلوك'};
+const PRES={p:['حاضر','b-p'],a:['غائب','b-a'],r:['متأخر','b-r']};
+const LS='suivi-v2';
+const S={tab:'home',cls:null,date:new Date().toISOString().slice(0,10),bulk:false,bulkType:'devoir',bulkLabel:'',sheet:null};
+let db=null,user=null,RO=false,roster={},recs=[],importCls=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(x,t)=>x===null?'—':(x*MAX[t]).toFixed(1).replace(/\.0$/,'');
+const sortDate=(a,b)=>a.date.localeCompare(b.date);
+const curCls=()=>(S.cls&&roster[S.cls])?S.cls:Object.keys(roster)[0];
+let Q=Promise.resolve();
+const enqueue=f=>(Q=Q.then(f).catch(e=>alert('تعذر الحفظ: '+(e.message||e.code||e))));
+const saveLS=()=>{try{localStorage.setItem(LS,JSON.stringify({roster,recs}))}catch(e){}};
+function persistRoster(){ if(db) return enqueue(()=>db.doc('roster/main').set({classes:roster})); saveLS(); }
+
+/* ---------- data ---------- */
+function findRec(c,st,d,t,l){return recs.find(r=>r.cls===c&&r.student===st&&r.date===d&&r.type===t&&r.label===l);}
+async function putRec(old,body){
+  if(db){
+    if(old) await db.collection('records').doc(old.id).set(body);
+    else await db.collection('records').doc().set(body);
+    return;
+  }
+  if(old) Object.assign(old,body); else recs.push({id:'l'+Date.now()+Math.random().toString(36).slice(2,7),...body});
+  saveLS(); render();
+}
+async function delRec(id){
+  if(db){ await db.collection('records').doc(id).delete(); return; }
+  recs=recs.filter(r=>r.id!==id); saveLS(); render();
+}
+function setVal(st,t,l,v){
+  const c=S.cls,d=S.date,old=findRec(c,st,d,t,l);
+  if(v===''||v==null){ if(old) enqueue(()=>delRec(old.id)); return; }
+  const body={cls:c,student:st,date:d,type:t,label:l,value:v};
+  enqueue(()=>putRec(old,body));
+}
+function stats(c,n){
+  const R=recs.filter(r=>r.cls===c&&r.student===n);
+  const avg=t=>{const a=R.filter(r=>r.type===t);return a.length?a.reduce((s,r)=>s+r.value/MAX[t],0)/a.length:null;};
+  const v={};for(const t in W)v[t]=avg(t);
+  let num=0,den=0;for(const t in W)if(v[t]!==null){num+=W[t]*v[t];den+=W[t];}
+  return {ab:R.filter(r=>r.type==='presence'&&r.value==='a').length,re:R.filter(r=>r.type==='presence'&&r.value==='r').length,tot:den?(num/den)*20:null,v};
+}
+function classStats(c){
+  const ss=(roster[c]||[]).map(n=>({n,...stats(c,n)}));
+  const pres=recs.filter(r=>r.cls===c&&r.type==='presence');
+  const p=pres.filter(r=>r.value==='p').length;
+  const wt=ss.filter(s=>s.tot!==null);
+  return {ss,count:ss.length,att:pres.length?Math.round(p/pres.length*100):null,avg:wt.length?wt.reduce((a,s)=>a+s.tot,0)/wt.length:null,risk:wt.filter(s=>s.tot<10).length,ab:pres.filter(r=>r.value==='a').length,re:pres.filter(r=>r.value==='r').length};
+}
+
+/* ---------- views ---------- */
+function viewHome(){
+  const ks=Object.keys(roster);
+  const intro=`<div class="sec"><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><button class="btn gh" data-act="importHome">استيراد لائحة من Excel</button></div>`;
+  if(!ks.length) return intro+`<div class="empty">لا توجد أقسام بعد.</div>`;
+  return intro+ks.map(c=>{const cs=classStats(c);return `<div class="item" data-act="open" data-cls="${esc(c)}"><div class="av ${cs.avg===null?'':cs.avg>=10?'ok':'bad'}">${esc(c.slice(0,2))}</div><div class="grow"><div class="name">${esc(c)}</div><div class="sub">${cs.count} تلميذ · الحضور ${cs.att===null?'—':cs.att+'%'}</div></div></div>`;}).join('');
+}
+function viewClass(){
+  const st=roster[S.cls]||[];
+  const tools=`<div class="sec row2"><button class="btn" data-act="bulkOpen">تسجيل جماعي للحصة</button></div><div class="sec row2"><button class="btn gh" data-act="addStudents">إضافة تلاميذ</button><button class="btn gh" data-act="importX">استيراد Excel</button></div>`;
+  if(!st.length) return tools+`<div class="empty">لا يوجد تلاميذ في هذا القسم.</div>`;
+  const rows=st.map(n=>{
+    const p=findRec(S.cls,n,S.date,'presence',''),pa=findRec(S.cls,n,S.date,'participation',''),co=findRec(S.cls,n,S.date,'comportement','');
+    const b=p?`<span class="badge ${PRES[p.value][1]}">${PRES[p.value][0]}</span>`:'';
+    const sub=[pa?`مشاركة ${pa.value}/5`:'',co?`سلوك ${co.value}/5`:''].filter(Boolean).join(' · ')||'لم تُسجل بعد لهذا اليوم';
+    const s=stats(S.cls,n);
+    return `<div class="item" data-act="student" data-name="${esc(n)}"><div class="av ${s.tot===null?'':s.tot>=10?'ok':'bad'}">${esc(n.charAt(0))}</div><div class="grow"><div class="name">${esc(n)}</div><div class="sub">${sub}</div></div>${b}</div>`;
+  }).join('');
+  return tools+rows+`<div class="sec"><button class="btn red" data-act="delclass" data-cls="${esc(S.cls)}">حذف القسم</button></div>`;
+}
+function viewBulk(){
+  const st=roster[S.cls]||[];
+  if(!st.length) return `<div class="empty">لا يوجد تلاميذ في هذا القسم.</div>`;
+  const head=`<div class="sec"><div class="row2"><button class="chipbtn ${S.bulkType==='devoir'?'on':''}" data-act="bt" data-v="devoir">فرض</button><button class="chipbtn ${S.bulkType==='cahier'?'on':''}" data-act="bt" data-v="cahier">دفتر</button></div><div class="row2" style="margin-top:8px"><input id="bLabel" placeholder="اسم الفرض (لإدخال العلامات)" value="${esc(S.bulkLabel)}"><button class="btn gh" style="margin-top:0;width:auto;padding:9px 12px" data-act="allPresent">الكل حاضر</button></div><p class="muted">كل خانة تُحفظ فور تغييرها. الخانات فارغة تعني أنه لم يُسجل شيء.</p></div>`;
+  const rows=st.map(n=>{
+    const p=findRec(S.cls,n,S.date,'presence',''),pa=findRec(S.cls,n,S.date,'participation',''),co=findRec(S.cls,n,S.date,'comportement',''),ex=S.bulkLabel.trim()?findRec(S.cls,n,S.date,S.bulkType,S.bulkLabel.trim()):null;
+    const e=esc(n);
+    return `<tr><td>${e}</td><td><select data-st="${e}" data-f="presence"><option value="">—</option><option value="p" ${p&&p.value==='p'?'selected':''}>حاضر</option><option value="a" ${p&&p.value==='a'?'selected':''}>غائب</option><option value="r" ${p&&p.value==='r'?'selected':''}>متأخر</option></select></td><td><input type="number" min="0" max="5" data-st="${e}" data-f="participation" value="${pa?pa.value:''}"></td><td><input type="number" min="0" max="5" data-st="${e}" data-f="comportement" value="${co?co.value:''}"></td><td><input type="number" min="0" max="20" step="0.5" data-st="${e}" data-f="exam" value="${ex?ex.value:''}"></td></tr>`;
+  }).join('');
+  return head+`<div class="tablewrap"><table><thead><tr><th>التلميذ</th><th>الحضور</th><th>مشاركة /5</th><th>سلوك /5</th><th>علامة /20</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function viewStats(){
+  const ks=Object.keys(roster);
+  if(!ks.length) return `<div class="empty">لا توجد بيانات بعد.</div>`;
+  const c=curCls(),cs=classStats(c);
+  const bars=cs.ss.map(s=>`<div class="barrow"><div class="bn">${esc(s.n)}</div><div class="bar"><div class="${s.tot!==null&&s.tot<10?'bad':''}" style="width:${s.tot===null?0:Math.min(100,s.tot*5)}%"></div></div><div class="bv">${s.tot===null?'—':s.tot.toFixed(1)}</div></div>`).join('');
+  return `<div class="sec"><select data-ctl="statcls">${ks.map(k=>`<option ${k===c?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
+  <div class="cards"><div class="card2"><b>${cs.count}</b><span>تلميذ</span></div><div class="card2"><b>${cs.att===null?'—':cs.att+'%'}</b><span>نسبة الحضور</span></div><div class="card2"><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b><span>متوسط القسم /20</span></div><div class="card2"><b>${cs.risk}</b><span>دون 10/20</span></div><div class="card2"><b>${cs.ab}</b><span>غيابات</span></div><div class="card2"><b>${cs.re}</b><span>تأخرات</span></div></div>
+  <div class="sec lbl">المعدل لكل تلميذ</div>${bars||'<div class="empty">لا تلاميذ</div>'}`;
+}
+function viewExport(){
+  const ks=Object.keys(roster);
+  if(!ks.length) return `<div class="empty">لا توجد بيانات لتصديرها بعد.</div>`;
+  const c=curCls();
+  return `<div class="sec"><select data-ctl="statcls">${ks.map(k=>`<option ${k===c?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
+  <div class="sec lbl">لائحة التلاميذ</div>
+  <div class="sec"><button class="btn" data-act="xRoster">لائحة كل الأقسام (Excel)</button><button class="btn gh" data-act="xClassRoster">لائحة ${esc(c)} (Excel)</button></div>
+  <div class="sec lbl">الحصيلة والتقارير</div>
+  <div class="sec"><button class="btn" data-act="xStats">حصيلة ${esc(c)} (Excel، عدة أوراق)</button><button class="btn gh" data-act="xReport">تقرير ${esc(c)} (HTML للطباعة)</button></div>
+  <div class="sec"><p class="muted">التقرير ملف HTML: افتحه بعد التنزيل ثم اختر طباعة أو حفظ كـ PDF.</p></div>`;
+}
+
+/* ---------- sheet (تلميذ واحد) ---------- */
+function drawSheet(){
+  const sh=S.sheet; if(!sh) return; let h='';
+  if(sh.type==='student'){
+    const n=sh.name,c=S.cls,d=S.date;
+    const seg=(t,opts)=>{const cur=findRec(c,n,d,t,'');return `<div class="seg">${opts.map(o=>`<button class="${cur&&String(cur.value)===String(o[0])?'on':''} ${o[2]||''}" data-act="set" data-type="${t}" data-v="${o[0]}">${o[1]}</button>`).join('')}</div>`;};
+    const nums=[0,1,2,3,4,5].map(i=>[i,i]);
+    const exams=recs.filter(r=>r.cls===c&&r.student===n&&(r.type==='devoir'||r.type==='cahier')).sort((a,b)=>b.date.localeCompare(a.date));
+    h=`<h3>${esc(n)}</h3><div class="muted">${esc(c)} · ${d}</div>
+    <div class="lbl">الحضور</div>${seg('presence',[['p','حاضر','p'],['a','غائب','a'],['r','متأخر','r']])}
+    <div class="lbl">المشاركة /5</div>${seg('participation',nums)}
+    <div class="lbl">السلوك /5</div>${seg('comportement',nums)}
+    <div class="lbl">علامة فرض أو دفتر /20</div>
+    <div class="row2"><select id="exT"><option value="devoir">فرض</option><option value="cahier">دفتر</option></select><input id="exL" placeholder="الاسم مثال: فرض 1"></div>
+    <div class="row2"><input id="exV" type="number" step="0.5" min="0" max="20" placeholder="العلامة /20"><button class="btn" style="margin-top:0;width:auto;padding:10px 16px" data-act="addex">حفظ</button></div>
+    <div style="margin-top:10px">${exams.map(r=>`<div class="ex"><div class="grow">${TN[r.type]} · ${esc(r.label)} · ${r.date}</div><b>${r.value}/20</b><button data-act="delrec" data-id="${r.id}">×</button></div>`).join('')||'<div class="muted">لا توجد علامات بعد</div>'}</div>
+    <button class="btn red" data-act="delstudent">حذف التلميذ</button>
+    <button class="btn gh" data-act="close">تم</button>`;
+  }else if(sh.type==='class'){
+    h=`<h3>قسم جديد</h3><input id="inCls" placeholder="مثال: 1AC"><button class="btn" data-act="saveClass">إنشاء</button><button class="btn gh" data-act="close">إلغاء</button>`;
+  }else if(sh.type==='students'){
+    h=`<h3>إضافة تلاميذ</h3><p class="muted">اكتب اسم تلميذ في كل سطر</p><textarea id="inSt"></textarea><button class="btn" data-act="saveSt">إضافة</button><button class="btn gh" data-act="close">إلغاء</button>`;
+  }
+  $('#sheet').innerHTML=h;
+}
+function openSheet(s){S.sheet=s;drawSheet();$('#ov').classList.add('open');}
+function closeSheet(){S.sheet=null;$('#ov').classList.remove('open');}
+
+/* ---------- Excel / téléchargements ---------- */
+async function saveFile(filename,data){
+  let dl=null; try{dl=await window.claude.use('downloads');}catch(e){}
+  if(!dl) return alert('التنزيل غير متاح في هذه النسخة');
+  try{await dl.save({filename,data});}catch(e){ if(e.code!=='declined') alert('تعذر التنزيل'); }
+}
+async function xlsxSave(filename,sheets){
+  if(!window.XLSX) return alert('مكتبة Excel غير متاحة حاليا، تحقق من الاتصال بالإنترنت');
+  const wb=XLSX.utils.book_new();
+  sheets.forEach(([name,aoa])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),name));
+  await saveFile(filename,XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+}
+function xRoster(cls){
+  const aoa=[['القسم','التلميذ']];
+  (cls?[cls]:Object.keys(roster)).forEach(c=>(roster[c]||[]).forEach(n=>aoa.push([c,n])));
+  if(aoa.length===1) return alert('لا يوجد تلاميذ لتصديرهم');
+  xlsxSave(cls?'liste-'+cls+'.xlsx':'liste-eleves.xlsx',[['اللائحة',aoa]]);
+}
+function xStats(c){
+  const cs=classStats(c);
+  const s1=[['التلميذ','غياب','تأخر','فروض /20','دفتر /20','مشاركة /5','سلوك /5','المعدل /20','الحالة']].concat(cs.ss.map(s=>[s.n,s.ab,s.re,fmt(s.v.devoir,'devoir'),fmt(s.v.cahier,'cahier'),fmt(s.v.participation,'participation'),fmt(s.v.comportement,'comportement'),s.tot===null?'—':+s.tot.toFixed(1),s.tot===null?'':(s.tot>=10?'جيد':'يحتاج متابعة')]));
+  const s2=[['التاريخ','التلميذ','الحالة']].concat(recs.filter(r=>r.cls===c&&r.type==='presence').sort(sortDate).map(r=>[r.date,r.student,PRES[r.value][0]]));
+  const s3=[['التاريخ','التلميذ','النوع','الاسم','العلامة /20']].concat(recs.filter(r=>r.cls===c&&(r.type==='devoir'||r.type==='cahier')).sort(sortDate).map(r=>[r.date,r.student,TN[r.type],r.label,r.value]));
+  xlsxSave('حصيلة-'+c+'.xlsx',[['الحصيلة',s1],['الغياب',s2],['العلامات',s3]]);
+}
+function xReport(c){
+  const cs=classStats(c);
+  const rows=cs.ss.map(s=>`<tr><td>${esc(s.n)}</td><td>${s.ab}</td><td>${s.re}</td><td>${fmt(s.v.devoir,'devoir')}</td><td>${fmt(s.v.cahier,'cahier')}</td><td>${fmt(s.v.participation,'participation')}</td><td>${fmt(s.v.comportement,'comportement')}</td><td><b>${s.tot===null?'—':s.tot.toFixed(1)}</b></td></tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body><h1>تقرير القسم ${esc(c)}</h1><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p><script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}</script>
+</body></html>`;
+  saveFile('تقرير-'+c+'.html',html);
+}
+
+/* ---------- استيراد Excel ---------- */
+fileIn.addEventListener('change',async()=>{
+  const f=fileIn.files[0]; fileIn.value=''; if(!f) return;
+  if(!window.XLSX) return alert('مكتبة Excel غير متاحة، تحقق من الاتصال بالإنترنت');
+  const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+  let fallback=importCls;
+  if(!fallback && wb.SheetNames.length===1) fallback=(prompt('اسم القسم لهذه اللائحة؟','')||'').trim();
+  importCls=null;
+  let added=0,newC=0,skipped=0;
+  const add=(c,n)=>{ if(!c||!n){skipped++;return;} if(!roster[c]){roster[c]=[];newC++;} if(roster[c].includes(n))skipped++; else{roster[c].push(n);added++;} };
+  wb.SheetNames.forEach(sn=>{
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,blankrows:false,defval:''});
+    if(!rows.length) return;
+    const head=rows[0].map(x=>String(x).trim());
+    const hasHead=head.some(h=>/^(القسم|التلميذ|الاسم|اسم|class|student|name)/i.test(h));
+    const ci=head.findIndex(h=>/^(القسم|class)$/i.test(h));
+    const ni=head.findIndex(h=>/^(التلميذ|الاسم|اسم|student|name)/i.test(h));
+    const nameCol=ni>=0?ni:0;
+    rows.slice(hasHead?1:0).forEach(r=>{
+      const n=String(r[nameCol]??'').trim();
+      if(!n) return;
+      const c=ci>=0?String(r[ci]).trim():(fallback||sn);
+      add(c,n);
+    });
+  });
+  await persistRoster();
+  alert('تمت إضافة '+added+' تلميذ'+(newC?'، و'+newC+' قسم جديد':'')+(skipped?'\nتم تجاهل '+skipped+' سطر (مكرر أو فارغ)':''));
+  render();
+});
+
+/* ---------- عرض ---------- */
+function render(){
+  if(S.cls&&!roster[S.cls])S.cls=null;
+  const inClass=S.tab==='home'&&S.cls;
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
+  $('#back').style.display=inClass?'block':'none';
+  $('#datebar').style.display=inClass?'flex':'none';
+  $('#dateIn').value=S.date;
+  $('#bulkBtn').textContent=S.bulk?'العودة للقائمة':'تسجيل جماعي';
+  $('#bulkBtn').dataset.act=S.bulk?'bulkClose':'bulkOpen';
+  $('#title').textContent=inClass?S.cls:({home:'متابعة التلاميذ',stats:'الإحصائيات',export:'التصدير'})[S.tab];
+  $('#fab').style.display=(S.tab==='home'&&!inClass)?'block':'none';
+  $('#ro').style.display=RO?'inline':'none';
+  let h;
+  if(inClass) h=S.bulk?viewBulk():viewClass();
+  else if(S.tab==='home') h=viewHome();
+  else if(S.tab==='stats') h=viewStats();
+  else h=viewExport();
+  $('#scroll').innerHTML=h;
+  if(S.sheet) drawSheet();
+}
+
+/* ---------- أحداث ---------- */
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport'];
+document.addEventListener('click',e=>{
+  if(e.target.id==='ov'){closeSheet();return;}
+  const nb=e.target.closest('.nav button');
+  if(nb){S.tab=nb.dataset.tab;S.cls=null;S.bulk=false;render();return;}
+  const t=e.target.closest('[data-act]');if(!t)return;
+  const a=t.dataset.act;
+  if(RO&&!READ_ACTS.includes(a)){alert('هذا التطبيق للقراءة فقط بالنسبة لك');return;}
+  if(a==='open'){S.cls=t.dataset.cls;S.tab='home';S.bulk=false;render();}
+  else if(a==='back'){S.cls=null;S.bulk=false;render();}
+  else if(a==='student'){if(t.dataset.cls)S.cls=t.dataset.cls;S.tab='home';openSheet({type:'student',name:t.dataset.name});render();}
+  else if(a==='fab'){openSheet({type:'class'});}
+  else if(a==='addStudents'){openSheet({type:'students'});}
+  else if(a==='importX'){importCls=S.cls;fileIn.click();}
+  else if(a==='importHome'){importCls=null;fileIn.click();}
+  else if(a==='bulkOpen'){S.bulk=true;render();}
+  else if(a==='bulkClose'){S.bulk=false;render();}
+  else if(a==='bt'){S.bulkType=t.dataset.v;render();}
+  else if(a==='allPresent'){(roster[S.cls]||[]).forEach(n=>{if(!findRec(S.cls,n,S.date,'presence',''))setVal(n,'presence','','p');});}
+  else if(a==='close'){closeSheet();render();}
+  else if(a==='set'){
+    const type=t.dataset.type,v=type==='presence'?t.dataset.v:Number(t.dataset.v);
+    const cur=findRec(S.cls,S.sheet.name,S.date,type,'');
+    setVal(S.sheet.name,type,'',cur&&cur.value===v?null:v);
+    render();
+  }
+  else if(a==='addex'){
+    const type=$('#exT').value,label=$('#exL').value.trim(),v=$('#exV').value,n=Number(v);
+    if(!label){alert('اكتب اسم الفرض أو الدفتر');return;}
+    if(v===''||isNaN(n)||n<0||n>20){alert('العلامة يجب أن تكون بين 0 و 20');return;}
+    setVal(S.sheet.name,type,label,n);
+    render();
+  }
+  else if(a==='delrec'){enqueue(()=>delRec(t.dataset.id));}
+  else if(a==='delstudent'){
+    if(!confirm('حذف التلميذ وكل سجلاته؟'))return;
+    const n=S.sheet.name;
+    roster[S.cls]=roster[S.cls].filter(x=>x!==n);
+    recs.filter(r=>r.cls===S.cls&&r.student===n).forEach(r=>enqueue(()=>delRec(r.id)));
+    persistRoster();closeSheet();render();
+  }
+  else if(a==='saveClass'){
+    const n=$('#inCls').value.trim();
+    if(n&&!roster[n]){roster[n]=[];S.cls=n;S.tab='home';persistRoster();}
+    closeSheet();render();
+  }
+  else if(a==='saveSt'){
+    const list=$('#inSt').value.split('\n').map(x=>x.trim()).filter(Boolean);
+    list.forEach(n=>{if(!roster[S.cls].includes(n))roster[S.cls].push(n);});
+    persistRoster();closeSheet();render();
+  }
+  else if(a==='delclass'){
+    const c=t.dataset.cls;
+    if(!confirm('حذف القسم "'+c+'" وكل تسجيلاته؟'))return;
+    recs.filter(r=>r.cls===c).forEach(r=>enqueue(()=>delRec(r.id)));
+    delete roster[c];
+    if(S.cls===c)S.cls=null;
+    S.bulk=false;persistRoster();render();
+  }
+  else if(a==='xRoster'){xRoster(null);}
+  else if(a==='xClassRoster'){xRoster(curCls());}
+  else if(a==='xStats'){xStats(curCls());}
+  else if(a==='xReport'){xReport(curCls());}
+});
+document.addEventListener('change',e=>{
+  const c=e.target;
+  if(c.dataset.ctl==='statcls'){S.cls=c.value;render();return;}
+  if(c.id==='dateIn'){S.date=c.value||S.date;render();return;}
+  if(c.id==='bLabel'){S.bulkLabel=c.value;render();return;}
+  if(c.dataset.st!==undefined){
+    if(RO){alert('هذا التطبيق للقراءة فقط بالنسبة لك');render();return;}
+    const st=c.dataset.st,f=c.dataset.f,v=c.value;
+    if(f==='presence'){setVal(st,'presence','',v);return;}
+    if(f==='exam'){
+      const label=S.bulkLabel.trim();
+      if(v===''){ if(label) setVal(st,S.bulkType,label,''); return; }
+      if(!label){alert('اكتب اسم الفرض أولا');render();return;}
+      const n=Number(v); if(isNaN(n)||n<0||n>20){alert('العلامة بين 0 و 20');render();return;}
+      setVal(st,S.bulkType,label,n);return;
+    }
+    if(v===''){setVal(st,f,'',null);return;}
+    const n=Number(v); if(isNaN(n)||n<0||n>5){alert('القيمة بين 0 و 5');render();return;}
+    setVal(st,f,'',n);
+  }
+});
+
+/* ---------- البداية ---------- */
+async function init(){
+  try{ if(window.claude){ db=await window.claude.use('db'); user=await window.claude.use('user'); } }catch(e){}
+  try{ if(user){ const w=await user.can('data.write'); RO=(w===false); } }catch(e){}
+  if(db){
+    db.doc('roster/main').onSnapshot(s=>{roster=(s.exists&&s.data()&&s.data().classes)||{};render();},()=>{});
+    db.collection('records').onSnapshot(s=>{recs=s.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));render();},()=>{});
+  }else{
+    try{
+      const o=JSON.parse(localStorage.getItem(LS)||'null');
+      if(o){roster=o.roster||{};recs=o.recs||[];}
+      else{ // migration depuis la version précédente
+        const v1=JSON.parse(localStorage.getItem('suivi-eleves-v1')||'null');
+        if(v1){roster=v1.classes||{};recs=v1.records||[];saveLS();}
+      }
+    }catch(e){}
+  }
+  render();
+}
+init();
+</script>
+</body>
+</html>
