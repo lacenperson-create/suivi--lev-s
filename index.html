@@ -80,6 +80,25 @@ th{color:var(--muted);font-weight:600}
 td input{width:76px;padding:6px}
 td select{width:92px;padding:6px}
 td:first-child{text-align:right;white-space:nowrap}
+
+.top{background:linear-gradient(135deg,#075e54,#128c7e);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.nav{box-shadow:0 -2px 10px rgba(0,0,0,.06)}
+.nav span{transition:transform .2s}
+.nav button.on span{transform:scale(1.15)}
+.item{transition:background .15s}
+.item:hover{background:var(--bg)}
+.av{box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.btn{box-shadow:0 3px 8px rgba(18,140,126,.25);transition:transform .1s}
+.btn:active{transform:scale(.98)}
+.card2{box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.greet{font-size:20px;font-weight:700;margin-bottom:4px}
+.profile{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#075e54,#128c7e);color:#fff;border-radius:16px;padding:16px;margin:12px 14px 0}
+.pav{width:54px;height:54px;border-radius:50%;background:#fff3;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+.card3{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+.card3 h4{margin:0 0 6px;font-size:15px;color:var(--g2)}
+.card3 label{display:block;font-size:13px;color:var(--muted);margin:10px 0 0}
+.card3 input,.card3 select{margin-top:4px;color:var(--text)}
+.note{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -92,13 +111,25 @@ td:first-child{text-align:right;white-space:nowrap}
     <button data-tab="home"><span>💬</span>الأقسام</button>
     <button data-tab="stats"><span>📊</span>الإحصائيات</button>
     <button data-tab="export"><span>📤</span>التصدير</button>
+    <button data-tab="settings"><span>⚙️</span>الإعدادات</button>
   </div>
   <div class="overlay" id="ov"><div class="sheet" id="sheet"></div></div>
 </div>
 <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" style="display:none">
 <script>
 const MAX={devoir:20,cahier:20,participation:5,comportement:5};
-const W={devoir:.5,cahier:.2,participation:.15,comportement:.15};
+const SKEY='suivi-settings';
+const DEF={teacher:'',school:'',year:'',w:{devoir:50,cahier:20,participation:15,comportement:15},pass:10,abs:5,theme:'auto'};
+let SET=JSON.parse(JSON.stringify(DEF));
+let W={...DEF.w};
+function applySettings(){
+  W={...SET.w};
+  document.documentElement.dataset.theme=SET.theme==='auto'?'':SET.theme;
+}
+function loadSettings(){
+  try{Object.assign(SET,JSON.parse(localStorage.getItem(SKEY)||'{}'));}catch(e){}
+  applySettings();
+}
 const TN={devoir:'الفروض',cahier:'تصحيح الدفتر',participation:'المشاركة',comportement:'السلوك'};
 const PRES={p:['حاضر','b-p'],a:['غائب','b-a'],r:['متأخر','b-r']};
 const LS='suivi-v2';
@@ -147,15 +178,15 @@ function classStats(c){
   const pres=recs.filter(r=>r.cls===c&&r.type==='presence');
   const p=pres.filter(r=>r.value==='p').length;
   const wt=ss.filter(s=>s.tot!==null);
-  return {ss,count:ss.length,att:pres.length?Math.round(p/pres.length*100):null,avg:wt.length?wt.reduce((a,s)=>a+s.tot,0)/wt.length:null,risk:wt.filter(s=>s.tot<10).length,ab:pres.filter(r=>r.value==='a').length,re:pres.filter(r=>r.value==='r').length};
+  return {ss,count:ss.length,att:pres.length?Math.round(p/pres.length*100):null,avg:wt.length?wt.reduce((a,s)=>a+s.tot,0)/wt.length:null,risk:wt.filter(s=>s.tot<SET.pass).length,ab:pres.filter(r=>r.value==='a').length,re:pres.filter(r=>r.value==='r').length};
 }
 
 /* ---------- views ---------- */
 function viewHome(){
   const ks=Object.keys(roster);
-  const intro=`<div class="sec"><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><button class="btn gh" data-act="importHome">استيراد لائحة من Excel</button></div>`;
+  const intro=`<div class="sec"><div class="greet">${esc(SET.teacher?'مرحبا، '+SET.teacher:'مرحبا بك')}</div><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><div class="row2"><button class="btn" data-act="importHome">استيراد لائحة من Excel</button><button class="btn gh" data-act="tplX">تنزيل نموذج Excel</button></div></div>`;
   if(!ks.length) return intro+`<div class="empty">لا توجد أقسام بعد.</div>`;
-  return intro+ks.map(c=>{const cs=classStats(c);return `<div class="item" data-act="open" data-cls="${esc(c)}"><div class="av ${cs.avg===null?'':cs.avg>=10?'ok':'bad'}">${esc(c.slice(0,2))}</div><div class="grow"><div class="name">${esc(c)}</div><div class="sub">${cs.count} تلميذ · الحضور ${cs.att===null?'—':cs.att+'%'}</div></div></div>`;}).join('');
+  return intro+ks.map(c=>{const cs=classStats(c);return `<div class="item" data-act="open" data-cls="${esc(c)}"><div class="av ${cs.avg===null?'':cs.avg>=SET.pass?'ok':'bad'}">${esc(c.slice(0,2))}</div><div class="grow"><div class="name">${esc(c)}</div><div class="sub">${cs.count} تلميذ · الحضور ${cs.att===null?'—':cs.att+'%'}</div></div></div>`;}).join('');
 }
 function viewClass(){
   const st=roster[S.cls]||[];
@@ -166,7 +197,7 @@ function viewClass(){
     const b=p?`<span class="badge ${PRES[p.value][1]}">${PRES[p.value][0]}</span>`:'';
     const sub=[pa?`مشاركة ${pa.value}/5`:'',co?`سلوك ${co.value}/5`:''].filter(Boolean).join(' · ')||'لم تُسجل بعد لهذا اليوم';
     const s=stats(S.cls,n);
-    return `<div class="item" data-act="student" data-name="${esc(n)}"><div class="av ${s.tot===null?'':s.tot>=10?'ok':'bad'}">${esc(n.charAt(0))}</div><div class="grow"><div class="name">${esc(n)}</div><div class="sub">${sub}</div></div>${b}</div>`;
+    return `<div class="item" data-act="student" data-name="${esc(n)}"><div class="av ${s.tot===null?'':s.tot>=SET.pass?'ok':'bad'}">${esc(n.charAt(0))}</div><div class="grow"><div class="name">${esc(n)}</div><div class="sub">${sub}</div></div>${b}</div>`;
   }).join('');
   return tools+rows+`<div class="sec"><button class="btn red" data-act="delclass" data-cls="${esc(S.cls)}">حذف القسم</button></div>`;
 }
@@ -185,10 +216,20 @@ function viewStats(){
   const ks=Object.keys(roster);
   if(!ks.length) return `<div class="empty">لا توجد بيانات بعد.</div>`;
   const c=curCls(),cs=classStats(c);
-  const bars=cs.ss.map(s=>`<div class="barrow"><div class="bn">${esc(s.n)}</div><div class="bar"><div class="${s.tot!==null&&s.tot<10?'bad':''}" style="width:${s.tot===null?0:Math.min(100,s.tot*5)}%"></div></div><div class="bv">${s.tot===null?'—':s.tot.toFixed(1)}</div></div>`).join('');
+  const bars=cs.ss.map(s=>`<div class="barrow"><div class="bn">${esc(s.n)}</div><div class="bar"><div class="${s.tot!==null&&s.tot<SET.pass?'bad':''}" style="width:${s.tot===null?0:Math.min(100,s.tot*5)}%"></div></div><div class="bv">${s.tot===null?'—':s.tot.toFixed(1)}</div></div>`).join('');
   return `<div class="sec"><select data-ctl="statcls">${ks.map(k=>`<option ${k===c?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
-  <div class="cards"><div class="card2"><b>${cs.count}</b><span>تلميذ</span></div><div class="card2"><b>${cs.att===null?'—':cs.att+'%'}</b><span>نسبة الحضور</span></div><div class="card2"><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b><span>متوسط القسم /20</span></div><div class="card2"><b>${cs.risk}</b><span>دون 10/20</span></div><div class="card2"><b>${cs.ab}</b><span>غيابات</span></div><div class="card2"><b>${cs.re}</b><span>تأخرات</span></div></div>
+  <div class="cards"><div class="card2"><b>${cs.count}</b><span>تلميذ</span></div><div class="card2"><b>${cs.att===null?'—':cs.att+'%'}</b><span>نسبة الحضور</span></div><div class="card2"><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b><span>متوسط القسم /20</span></div><div class="card2"><b>${cs.risk}</b><span>دون 10/20</span></div><div class="card2"><b>${cs.ab}</b><span>غيابات</span></div><div class="card2"><b>${cs.re}</b><span>تأخرات</span></div><div class="card2"><b>${cs.ss.filter(x=>x.ab>=SET.abs).length}</b><span>غياب مرتفع</span></div></div>
   <div class="sec lbl">المعدل لكل تلميذ</div>${bars||'<div class="empty">لا تلاميذ</div>'}`;
+}
+function viewSettings(){
+  const f=(id,label,val,type,extra)=>`<label>${label}<input id="${id}" type="${type||'text'}" value="${esc(val)}" ${extra||''}></label>`;
+  return `<div class="profile"><div class="pav">${esc((SET.teacher||'م').charAt(0))}</div><div><b>${esc(SET.teacher||'المعلم')}</b><div style="opacity:.85;font-size:13px">${esc(SET.school||'المؤسسة')} ${esc(SET.year?'· '+SET.year:'')}</div></div></div>
+  <div class="sec card3"><h4>الملف الشخصي</h4>${f('sName','الاسم الكامل',SET.teacher)}${f('sSchool','المؤسسة',SET.school)}${f('sYear','السنة الدراسية',SET.year,'text','placeholder="2026-2027"')}</div>
+  <div class="sec card3"><h4>معامل المعدل</h4><p class="note">نسب تقريبية، يُعاد حسابها تلقائيا حتى لو لم يكن مجموعها 100.</p>${f('sDev','الفروض (%)',SET.w.devoir,'number','min="0" max="100"')}${f('sCah','تصحيح الدفتر (%)',SET.w.cahier,'number','min="0" max="100"')}${f('sPart','المشاركة (%)',SET.w.participation,'number','min="0" max="100"')}${f('sComp','السلوك (%)',SET.w.comportement,'number','min="0" max="100"')}</div>
+  <div class="sec card3"><h4>التنبيهات</h4>${f('sPass','حد النجاح من 20',SET.pass,'number','min="0" max="20" step="0.5"')}${f('sAbs','تنبيه عند عدد غيابات يساوي أو يفوق',SET.abs,'number','min="1"')}</div>
+  <div class="sec card3"><h4>المظهر</h4><label>المظهر<select id="sTheme"><option value="auto" ${SET.theme==='auto'?'selected':''}>تلقائي حسب الهاتف</option><option value="light" ${SET.theme==='light'?'selected':''}>فاتح</option><option value="dark" ${SET.theme==='dark'?'selected':''}>داكن</option></select></label></div>
+  <div class="sec"><button class="btn" data-act="saveSet">حفظ الإعدادات</button><button class="btn gh" data-act="resetSet">استعادة الافتراضي</button></div>
+  <div class="sec note" style="text-align:center;padding:16px">الإصدار 2.0 · الإعدادات محفوظة على هذا الجهاز</div>`;
 }
 function viewExport(){
   const ks=Object.keys(roster);
@@ -250,7 +291,7 @@ function xRoster(cls){
 }
 function xStats(c){
   const cs=classStats(c);
-  const s1=[['التلميذ','غياب','تأخر','فروض /20','دفتر /20','مشاركة /5','سلوك /5','المعدل /20','الحالة']].concat(cs.ss.map(s=>[s.n,s.ab,s.re,fmt(s.v.devoir,'devoir'),fmt(s.v.cahier,'cahier'),fmt(s.v.participation,'participation'),fmt(s.v.comportement,'comportement'),s.tot===null?'—':+s.tot.toFixed(1),s.tot===null?'':(s.tot>=10?'جيد':'يحتاج متابعة')]));
+  const s1=[['التلميذ','غياب','تأخر','فروض /20','دفتر /20','مشاركة /5','سلوك /5','المعدل /20','الحالة']].concat(cs.ss.map(s=>[s.n,s.ab,s.re,fmt(s.v.devoir,'devoir'),fmt(s.v.cahier,'cahier'),fmt(s.v.participation,'participation'),fmt(s.v.comportement,'comportement'),s.tot===null?'—':+s.tot.toFixed(1),s.tot===null?'':(s.tot>=SET.pass?'جيد':'يحتاج متابعة')]));
   const s2=[['التاريخ','التلميذ','الحالة']].concat(recs.filter(r=>r.cls===c&&r.type==='presence').sort(sortDate).map(r=>[r.date,r.student,PRES[r.value][0]]));
   const s3=[['التاريخ','التلميذ','النوع','الاسم','العلامة /20']].concat(recs.filter(r=>r.cls===c&&(r.type==='devoir'||r.type==='cahier')).sort(sortDate).map(r=>[r.date,r.student,TN[r.type],r.label,r.value]));
   xlsxSave('حصيلة-'+c+'.xlsx',[['الحصيلة',s1],['الغياب',s2],['العلامات',s3]]);
@@ -258,10 +299,13 @@ function xStats(c){
 function xReport(c){
   const cs=classStats(c);
   const rows=cs.ss.map(s=>`<tr><td>${esc(s.n)}</td><td>${s.ab}</td><td>${s.re}</td><td>${fmt(s.v.devoir,'devoir')}</td><td>${fmt(s.v.cahier,'cahier')}</td><td>${fmt(s.v.participation,'participation')}</td><td>${fmt(s.v.comportement,'comportement')}</td><td><b>${s.tot===null?'—':s.tot.toFixed(1)}</b></td></tr>`).join('');
-  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body><h1>تقرير القسم ${esc(c)}</h1><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p></body></html>`;
+  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body><h1>تقرير القسم ${esc(c)}</h1><p>${esc(SET.school||'')} ${esc(SET.teacher?'· '+SET.teacher:'')} ${esc(SET.year?'· '+SET.year:'')}</p><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p></body></html>`;
   saveFile('تقرير-'+c+'.html',html);
 }
 
+function xTemplate(){
+  xlsxSave('نموذج-لائحة-التلاميذ.xlsx',[['اللائحة',[['القسم','التلميذ'],['1AC','اسم التلميذ الأول'],['1AC','اسم التلميذ الثاني']]]]);
+}
 /* ---------- استيراد Excel ---------- */
 fileIn.addEventListener('change',async()=>{
   const f=fileIn.files[0]; fileIn.value=''; if(!f) return;
@@ -271,7 +315,8 @@ fileIn.addEventListener('change',async()=>{
   if(!fallback && wb.SheetNames.length===1) fallback=(prompt('اسم القسم لهذه اللائحة؟','')||'').trim();
   importCls=null;
   let added=0,newC=0,skipped=0;
-  const add=(c,n)=>{ if(!c||!n){skipped++;return;} if(!roster[c]){roster[c]=[];newC++;} if(roster[c].includes(n))skipped++; else{roster[c].push(n);added++;} };
+  const touched=new Set();
+  const add=(c,n)=>{ if(!c||!n){skipped++;return;} touched.add(c); if(!roster[c]){roster[c]=[];newC++;} if(roster[c].includes(n))skipped++; else{roster[c].push(n);added++;} };
   wb.SheetNames.forEach(sn=>{
     const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,blankrows:false,defval:''});
     if(!rows.length) return;
@@ -288,6 +333,7 @@ fileIn.addEventListener('change',async()=>{
     });
   });
   await persistRoster();
+  if(touched.size===1){S.cls=[...touched][0];S.tab='home';S.bulk=false;}
   alert('تمت إضافة '+added+' تلميذ'+(newC?'، و'+newC+' قسم جديد':'')+(skipped?'\nتم تجاهل '+skipped+' سطر (مكرر أو فارغ)':''));
   render();
 });
@@ -302,20 +348,21 @@ function render(){
   $('#dateIn').value=S.date;
   $('#bulkBtn').textContent=S.bulk?'العودة للقائمة':'تسجيل جماعي';
   $('#bulkBtn').dataset.act=S.bulk?'bulkClose':'bulkOpen';
-  $('#title').textContent=inClass?S.cls:({home:'متابعة التلاميذ',stats:'الإحصائيات',export:'التصدير'})[S.tab];
+  $('#title').textContent=inClass?S.cls:({home:'متابعة التلاميذ',stats:'الإحصائيات',export:'التصدير',settings:'الإعدادات'})[S.tab];
   $('#fab').style.display=(S.tab==='home'&&!inClass)?'block':'none';
   $('#ro').style.display=RO?'inline':'none';
   let h;
   if(inClass) h=S.bulk?viewBulk():viewClass();
   else if(S.tab==='home') h=viewHome();
   else if(S.tab==='stats') h=viewStats();
+  else if(S.tab==='settings') h=viewSettings();
   else h=viewExport();
   $('#scroll').innerHTML=h;
   if(S.sheet) drawSheet();
 }
 
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport'];
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet'];
 document.addEventListener('click',e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
@@ -374,6 +421,21 @@ document.addEventListener('click',e=>{
     if(S.cls===c)S.cls=null;
     S.bulk=false;persistRoster();render();
   }
+  else if(a==='tplX'){xTemplate();}
+  else if(a==='saveSet'){
+    const num=(id,lo,hi)=>{const v=Number($(id).value);return (isNaN(v)||v<lo||v>hi)?null:v;};
+    const w={devoir:num('#sDev',0,100),cahier:num('#sCah',0,100),participation:num('#sPart',0,100),comportement:num('#sComp',0,100)};
+    const pass=num('#sPass',0,20), abs=num('#sAbs',1,99);
+    if(Object.values(w).includes(null)||pass===null||abs===null){alert('تحقق من القيم المدخلة');return;}
+    SET={teacher:$('#sName').value.trim(),school:$('#sSchool').value.trim(),year:$('#sYear').value.trim(),w,pass,abs,theme:$('#sTheme').value};
+    try{localStorage.setItem(SKEY,JSON.stringify(SET));}catch(e){}
+    applySettings();alert('تم حفظ الإعدادات');render();
+  }
+  else if(a==='resetSet'){
+    if(!confirm('استعادة الإعدادات الافتراضية؟'))return;
+    try{localStorage.removeItem(SKEY);}catch(e){}
+    SET=JSON.parse(JSON.stringify(DEF));applySettings();render();
+  }
   else if(a==='xRoster'){xRoster(null);}
   else if(a==='xClassRoster'){xRoster(curCls());}
   else if(a==='xStats'){xStats(curCls());}
@@ -420,6 +482,7 @@ async function init(){
   }
   render();
 }
+loadSettings();
 init();
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}</script>
