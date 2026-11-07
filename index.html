@@ -225,6 +225,8 @@ a{color:var(--g2)}
 <script>
 const MAX={devoir:20,cahier:20,participation:5,comportement:5};
 const SKEY='suivi-settings';
+const AKEY='suivi-auth',SESS='suivi-session';
+let AUTH=null,SHARE_TEXT=null;
 const DEF={teacher:'',school:'',year:'',w:{devoir:50,cahier:20,participation:15,comportement:15},pass:10,abs:5,theme:'auto',photo:'',logo:''};
 let SET=JSON.parse(JSON.stringify(DEF));
 let W={...DEF.w};
@@ -329,6 +331,15 @@ function viewStats(){
   <div class="sec card3"><div class="row2"><select data-ctl="ctype">${[['bar','أعمدة'],['hbar','أعمدة أفقية'],['line','خطي'],['pie','دائري'],['doughnut','حلقي']].map(o=>`<option value="${o[0]}" ${S.ctype===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select><select data-ctl="cmetric"><option value="avg" ${S.cmetric==='avg'?'selected':''}>المعدلات</option><option value="att" ${S.cmetric==='att'?'selected':''}>الغياب</option></select></div><canvas id="chartC" style="margin-top:10px;max-height:320px"></canvas></div>
   <div class="sec lbl">المعدل لكل تلميذ</div>${bars||'<div class="empty">لا تلاميذ</div>'}`;
 }
+function viewAuth(){
+  const f=(id,l,t)=>`<label>${l}<input id="${id}" type="${t||'text'}"></label>`;
+  if(!AUTH) return `<div class="sec card3"><h4>إنشاء حساب</h4><p class="note">أنشئ حسابا لحماية بياناتك على هذا الجهاز.</p>${f('aName','الاسم الكامل')}${f('aEmail','البريد الإلكتروني','email')}${f('aPass','كلمة المرور (6 أحرف على الأقل)','password')}${f('aPass2','تأكيد كلمة المرور','password')}<button class="btn" data-act="signup">إنشاء الحساب</button></div>`;
+  return `<div class="sec card3"><h4>تسجيل الدخول</h4><p class="note">مرحبا ${esc(AUTH.name)}</p>${f('aEmail','البريد الإلكتروني','email')}${f('aPass','كلمة المرور','password')}<button class="btn" data-act="login">دخول</button></div>`;
+}
+async function hashPass(salt,pass){
+  const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+pass));
+  return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
 function viewSettings(){
   const f=(id,label,val,type,extra)=>`<label>${label}<input id="${id}" type="${type||'text'}" value="${esc(val)}" ${extra||''}></label>`;
   return `<div class="profile"><div class="pav">${SET.photo?`<img src="${SET.photo}" style="width:54px;height:54px;border-radius:50%;object-fit:cover">`:esc((SET.teacher||'م').charAt(0))}</div><div><b>${esc(SET.teacher||'المعلم')}</b><div style="opacity:.85;font-size:13px">${esc(SET.school||'المؤسسة')} ${esc(SET.year?'· '+SET.year:'')}</div></div></div>
@@ -337,7 +348,7 @@ function viewSettings(){
   <div class="sec card3"><h4>معامل المعدل</h4><p class="note">نسب تقريبية، يُعاد حسابها تلقائيا حتى لو لم يكن مجموعها 100.</p>${f('sDev','الفروض (%)',SET.w.devoir,'number','min="0" max="100"')}${f('sCah','تصحيح الدفتر (%)',SET.w.cahier,'number','min="0" max="100"')}${f('sPart','المشاركة (%)',SET.w.participation,'number','min="0" max="100"')}${f('sComp','السلوك (%)',SET.w.comportement,'number','min="0" max="100"')}</div>
   <div class="sec card3"><h4>التنبيهات</h4>${f('sPass','حد النجاح من 20',SET.pass,'number','min="0" max="20" step="0.5"')}${f('sAbs','تنبيه عند عدد غيابات يساوي أو يفوق',SET.abs,'number','min="1"')}</div>
   <div class="sec card3"><h4>المظهر</h4><label>المظهر<select id="sTheme"><option value="auto" ${SET.theme==='auto'?'selected':''}>تلقائي حسب الهاتف</option><option value="light" ${SET.theme==='light'?'selected':''}>فاتح</option><option value="dark" ${SET.theme==='dark'?'selected':''}>داكن</option></select></label></div>
-  <div class="sec"><button class="btn" data-act="saveSet">حفظ الإعدادات</button><button class="btn gh" data-act="resetSet">استعادة الافتراضي</button></div>
+  <div class="sec"><button class="btn" data-act="saveSet">حفظ الإعدادات</button><button class="btn gh" data-act="resetSet">استعادة الافتراضي</button></div><div class="sec"><button class="btn red" data-act="logout">تسجيل الخروج</button></div>
   <div class="sec note" style="text-align:center;padding:16px">الإصدار 2.0 · الإعدادات محفوظة على هذا الجهاز</div>`;
 }
 function viewExport(){
@@ -349,6 +360,8 @@ function viewExport(){
   <div class="sec"><button class="btn" data-act="xRoster">لائحة كل الأقسام (Excel)</button><button class="btn gh" data-act="xClassRoster">لائحة ${esc(c)} (Excel)</button></div>
   <div class="sec lbl">الحصيلة والتقارير</div>
   <div class="sec"><button class="btn" data-act="xStats">حصيلة ${esc(c)} (Excel، عدة أوراق)</button><button class="btn gh" data-act="xReport">تقرير ${esc(c)} (HTML للطباعة)</button></div>
+  <div class="sec lbl">إرسال عبر واتساب</div>
+  <div class="sec"><button class="btn" data-act="shStats">إرسال حصيلة القسم</button><button class="btn gh" data-act="shAbs">إرسال الغياب اليومي</button></div>
   <div class="sec lbl">الغياب والنتائج</div>
   <div class="sec"><button class="btn" data-act="xAbs">ملف الغياب لليوم المختار (Excel)</button></div>
   <div class="sec card3"><h4>استيراد نقط الفروض أو الدفتر</h4><p class="note">ملف Excel فيه عمودان: التلميذ والعلامة من 20.</p><input id="impLabel" placeholder="اسم الفرض أو الدفتر"><select id="impType" style="margin-top:6px"><option value="devoir">فرض</option><option value="cahier">دفتر</option></select><button class="btn" data-act="importGrades">استيراد النقط من Excel</button></div>
@@ -392,11 +405,27 @@ async function saveFile(filename,data){
   const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
   setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
 }
+async function shareFile(filename,data,text){
+  const type=filename.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'text/html';
+  const file=new File([data],filename,{type});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:filename,text});return;}
+    catch(e){if(e.name==='AbortError')return;}
+  }
+  await saveFile(filename,data);
+  window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(الملف نزل إلى جهازك، أرفقه في المحادثة)'),'_blank');
+}
+function textFor(c){
+  const cs=classStats(c);
+  return `حصيلة قسم ${c}\nعدد التلاميذ: ${cs.count}\nنسبة الحضور: ${cs.att===null?'—':cs.att+'%'}\nمتوسط القسم: ${cs.avg===null?'—':cs.avg.toFixed(1)}/20\nتلاميذ دون ${SET.pass}/20: ${cs.risk}`;
+}
 async function xlsxSave(filename,sheets){
   if(!window.XLSX) return alert('مكتبة Excel غير متاحة حاليا، تحقق من الاتصال بالإنترنت');
   const wb=XLSX.utils.book_new();
   sheets.forEach(([name,aoa])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),name));
-  await saveFile(filename,XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  if(SHARE_TEXT!==null){const t=SHARE_TEXT;SHARE_TEXT=null;return shareFile(filename,buf,t);}
+  await saveFile(filename,buf);
 }
 function xRoster(cls){
   const aoa=[['القسم','التلميذ']];
@@ -412,9 +441,41 @@ function xStats(c){
   xlsxSave('حصيلة-'+c+'.xlsx',[['الحصيلة',s1],['الغياب',s2],['العلامات',s3]]);
 }
 function xReport(c){
-  const cs=classStats(c);
-  const rows=cs.ss.map(s=>`<tr><td>${esc(s.n)}</td><td>${s.ab}</td><td>${s.re}</td><td>${fmt(s.v.devoir,'devoir')}</td><td>${fmt(s.v.cahier,'cahier')}</td><td>${fmt(s.v.participation,'participation')}</td><td>${fmt(s.v.comportement,'comportement')}</td><td><b>${s.tot===null?'—':s.tot.toFixed(1)}</b></td></tr>`).join('');
-  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body>${SET.logo?`<img src="${SET.logo}" style="max-height:90px;max-width:100%;display:block;margin:0 auto 10px">`:''}<h1>تقرير القسم ${esc(c)}</h1><p>${esc(SET.school||'')} ${esc(SET.teacher?'· '+SET.teacher:'')} ${esc(SET.year?'· '+SET.year:'')}</p><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p></body></html>`;
+  const cs=classStats(c),ss=cs.ss,n=ss.length||1;
+  const mean=a=>{const v=a.filter(x=>x!==null);return v.length?v.reduce((p,x)=>p+x,0)/v.length:null;};
+  const cav={};['devoir','cahier','participation','comportement'].forEach(t=>cav[t]=mean(ss.map(x=>x.v[t])));
+  const fx=(x,t)=>x===null?'—':(x*MAX[t]).toFixed(1);
+  const W=640,H=300,pad=40,gap=(W-pad*2)/n,bw=Math.min(40,gap*0.6);
+  const y=v=>H-40-(v/20)*(H-70);
+  const bars=ss.map((x,i)=>{
+    const v=x.tot===null?0:x.tot,bx=pad+i*gap+(gap-bw)/2,cx=(bx+bw/2).toFixed(1);
+    return `<rect x="${bx.toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H-40-y(v)).toFixed(1)}" rx="4" fill="${x.tot!==null&&x.tot<SET.pass?'#b91c1c':'#0b7a6e'}"/><text x="${cx}" y="${(y(v)-5).toFixed(1)}" font-size="11" text-anchor="middle">${x.tot===null?'—':x.tot.toFixed(1)}</text><text x="${cx}" y="${H-22}" font-size="10" text-anchor="end" transform="rotate(-35 ${cx} ${H-22})">${esc(x.n)}</text>`;
+  }).join('');
+  const grid=[0,5,10,15,20].map(v=>`<line x1="${pad}" x2="${W-pad}" y1="${y(v)}" y2="${y(v)}" stroke="#e5e7eb"/><text x="${pad-6}" y="${y(v)+4}" font-size="10" text-anchor="end" fill="#6b7280">${v}</text>`).join('');
+  const avgLine=cs.avg===null?'':`<line x1="${pad}" x2="${W-pad}" y1="${y(cs.avg)}" y2="${y(cs.avg)}" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 4"/><text x="${W-pad}" y="${(y(cs.avg)-6).toFixed(1)}" font-size="11" fill="#b45309" text-anchor="end">Valeur moyenne ${cs.avg.toFixed(1)}</text>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="histogramme des moyennes">${grid}${bars}${avgLine}</svg>`;
+  const rows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.ab}</td><td>${x.re}</td><td>${fx(x.v.devoir,'devoir')}</td><td>${fx(x.v.cahier,'cahier')}</td><td>${fx(x.v.participation,'participation')}</td><td>${fx(x.v.comportement,'comportement')}</td><td><b>${x.tot===null?'—':x.tot.toFixed(1)}</b></td></tr>`).join('');
+  const avgRow=`<tr class="moy"><td>Valeur moyenne / القيمة المتوسطة</td><td>${(cs.ab/n).toFixed(1)}</td><td>${(cs.re/n).toFixed(1)}</td><td>${fx(cav.devoir,'devoir')}</td><td>${fx(cav.cahier,'cahier')}</td><td>${fx(cav.participation,'participation')}</td><td>${fx(cav.comportement,'comportement')}</td><td><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b></td></tr>`;
+  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>
+body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}
+h1{font-size:20px;margin:6px 0}
+.k{display:inline-block;margin:4px 14px 4px 0;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px}
+.k b{font-size:18px;color:#0b7a6e}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+th,td{border:1px solid #d1d5db;padding:6px;text-align:center}
+th{background:#e8f3ef}
+tr.moy td{background:#fff7e6;font-weight:700}
+.box{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:14px}
+@media print{body{margin:12mm}.box,table{break-inside:avoid}}
+</style></head><body>
+${SET.logo?`<img src="${SET.logo}" style="max-height:90px;max-width:100%;display:block;margin:0 auto 10px">`:''}
+<h1>تقرير القسم ${esc(c)}</h1>
+<p>${esc(SET.school||'')} ${esc(SET.teacher?'· '+SET.teacher:'')} ${esc(SET.year?'· '+SET.year:'')}</p>
+<div><span class="k">عدد التلاميذ <b>${cs.count}</b></span><span class="k">نسبة الحضور <b>${cs.att===null?'—':cs.att+'%'}</b></span><span class="k">Valeur moyenne / المتوسط <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></span><span class="k">دون ${SET.pass}/20 <b>${cs.risk}</b></span></div>
+<div class="box"><h3 style="margin:0 0 6px">معدلات التلاميذ (أعمدة)</h3>${svg}</div>
+<table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}${avgRow}</tbody></table>
+<p style="color:#6b7280;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p>
+</body></html>`;
   saveFile('تقرير-'+c+'.html',html);
 }
 
@@ -500,6 +561,12 @@ function readImg(el){
   r.readAsDataURL(f);
 }
 function render(){
+  const authed=!!AUTH&&localStorage.getItem(SESS)==='1';
+  document.querySelector('.nav').style.display=authed?'flex':'none';
+  if(!authed){
+    $('#fab').style.display='none';$('#datebar').style.display='none';$('#back').style.display='none';$('#ro').style.display='none';
+    $('#title').textContent='تسجيل الدخول';$('#scroll').innerHTML=viewAuth();return;
+  }
   if(S.cls&&!roster[S.cls])S.cls=null;
   const inClass=S.tab==='home'&&S.cls;
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
@@ -541,8 +608,8 @@ function drawChart(){
   chartObj=new Chart(cv,{type:t==='hbar'?'bar':t,data:{labels,datasets:[{label,data,backgroundColor:pie?['#25d366','#e53935','#f59e0b']:'#128c7e',borderColor:'#128c7e',tension:.3}]},options:{indexAxis:t==='hbar'?'y':'x',responsive:true,plugins:{legend:{display:pie}},scales:pie?{}:{y:{beginAtZero:true}}}});
 }
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs'];
-document.addEventListener('click',e=>{
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs'];
+document.addEventListener('click',async e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
   if(nb){S.tab=nb.dataset.tab;S.cls=null;S.bulk=false;render();return;}
@@ -601,6 +668,23 @@ document.addEventListener('click',e=>{
     S.bulk=false;persistRoster();render();
   }
   else if(a==='tplX'){xTemplate();}
+  else if(a==='shStats'){const c=curCls();if(!c)return alert('أضف قسما أولا');SHARE_TEXT=textFor(c);xStats(c);}
+  else if(a==='shAbs'){const c=curCls();if(!c)return alert('أضف قسما أولا');SHARE_TEXT=textFor(c)+'\nالغياب ليوم '+S.date;xAbsence(c,S.date);}
+  else if(a==='signup'){
+    const n=$('#aName').value.trim(),e=$('#aEmail').value.trim().toLowerCase(),p=$('#aPass').value,p2=$('#aPass2').value;
+    if(!n||!/^\S+@\S+\.\S+$/.test(e))return alert('أدخل الاسم وبريدا إلكترونيا صالحا');
+    if(p.length<6)return alert('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    if(p!==p2)return alert('كلمتا المرور غير متطابقتين');
+    const salt=Array.from(crypto.getRandomValues(new Uint8Array(16))).join(',');
+    AUTH={name:n,email:e,salt,hash:await hashPass(salt,p)};
+    localStorage.setItem(AKEY,JSON.stringify(AUTH));localStorage.setItem(SESS,'1');render();
+  }
+  else if(a==='login'){
+    const e=$('#aEmail').value.trim().toLowerCase(),p=$('#aPass').value;
+    if(!AUTH||e!==AUTH.email||(await hashPass(AUTH.salt,p))!==AUTH.hash)return alert('البريد أو كلمة المرور غير صحيحة');
+    localStorage.setItem(SESS,'1');render();
+  }
+  else if(a==='logout'){localStorage.removeItem(SESS);S.cls=null;S.tab='home';render();}
   else if(a==='xAbs'){xAbsence(curCls(),S.date);}
   else if(a==='importGrades'){S.impLabel=$('#impLabel').value.trim();S.impType=$('#impType').value;if(!S.impLabel){alert('اكتب اسم الفرض أو الدفتر أولا');return;}importMode='grades';fileIn.click();}
   else if(a==='importAtt'){importMode='att';fileIn.click();}
@@ -676,6 +760,7 @@ async function init(){
   render();
 }
 loadSettings();
+AUTH=JSON.parse(localStorage.getItem(AKEY)||'null');
 init();
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}</script>
