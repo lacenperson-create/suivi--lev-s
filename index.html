@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>متابعة التلاميذ</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#075e54">
+<meta name="theme-color" content="#0b1020">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="التلاميذ">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{--g1:#075e54;--g2:#128c7e;--g3:#25d366;--bg:#efeae2;--card:#fff;--text:#111b21;--muted:#667781;--line:#e9edef;--red:#e53935;--amber:#f59e0b}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--line:#222d34}}
@@ -99,11 +100,114 @@ td:first-child{text-align:right;white-space:nowrap}
 .card3 label{display:block;font-size:13px;color:var(--muted);margin:10px 0 0}
 .card3 input,.card3 select{margin-top:4px;color:var(--text)}
 .note{font-size:12px;color:var(--muted)}
+
+#app{background:var(--bg)}
+.top{border-radius:0 0 18px 18px;gap:10px}
+#logo{height:34px;border-radius:8px;background:#fff;padding:2px}
+.item{margin:6px 10px;border-radius:14px;border:1px solid var(--line);background:var(--card)}
+.item:hover{background:var(--card);filter:brightness(1.02)}
+.nav{border-radius:18px 18px 0 0}
+.fab{background:linear-gradient(135deg,#25d366,#128c7e)}
+.greet{background:linear-gradient(135deg,#075e54,#128c7e);-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block}
+.card2{border-radius:14px;padding:12px}
+.card2 b{font-size:22px;color:var(--g2)}
+.card3{border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.card3 img{max-width:100%;border-radius:12px;margin-top:6px}
+.badge{box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.sec.lbl,.lbl{letter-spacing:.2px}
+
+:root{--g1:#374151;--g2:#4b5563;--g3:#6b7280;--bg:#f3f4f6;--card:#ffffff;--text:#111827;--muted:#6b7280;--line:#e5e7eb}
+.top{background:var(--g1);box-shadow:none;border-radius:0}
+.nav{box-shadow:none;border-radius:0;border-top:1px solid var(--line)}
+.nav button.on{color:var(--g1)}
+.nav button.on span{transform:none}
+.fab{background:var(--g1);box-shadow:none}
+.btn{background:var(--g1);box-shadow:none;border-radius:6px}
+.btn.gh{background:var(--card)}
+.btn:active{transform:none}
+.item{margin:0;border-radius:0;border:0;border-bottom:1px solid var(--line)}
+.item:hover{filter:none}
+.av{box-shadow:none;background:var(--g3)}
+.av.ok{background:var(--g2)} .av.bad{background:#b91c1c}
+.greet{background:none;-webkit-text-fill-color:currentColor;color:var(--text);font-size:17px;display:block}
+.card2,.card3{box-shadow:none;border-radius:6px}
+.card2 b{color:var(--text)}
+.card3 h4{color:var(--g1)}
+.profile{background:var(--g1);border-radius:6px;margin:0}
+.pav{background:#ffffff33}
+.chipbtn.on,.seg button.on{background:var(--g2);border-color:var(--g2)}
+.badge{box-shadow:none;border-radius:4px}
+.b-p{background:#16a34a}.b-a{background:#b91c1c}.b-r{background:#b45309}
+#logo{border-radius:0}
+.barrow{background:var(--card)}
+
+:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{
+  --bg:#0b1020;--card:#131a2e;--text:#f4f6fb;--muted:#8b93a7;--line:#1f2a44;
+  --g1:#131a2e;--g2:#c6ff3d;--g3:#7c8cff;--red:#ff5c7a;--amber:#ffb84d;--on:#0b1020}
+:root[data-theme="light"]{
+  --bg:#f6f4ef;--card:#ffffff;--text:#0b1020;--muted:#6b7280;--line:#e6e2d8;
+  --g1:#ffffff;--g2:#5b4cff;--g3:#8b84ff;--red:#e11d48;--amber:#d97706;--on:#ffffff}
+body{background:var(--bg)}
+#app{background:var(--bg)}
+.top{background:var(--card);color:var(--text);border-bottom:1px solid var(--line);box-shadow:none;border-radius:0;min-height:64px;padding:14px 16px}
+.top h2{font-size:22px;font-weight:800;letter-spacing:-.3px;color:var(--text)}
+.top button{color:var(--g2)}
+.pill{background:var(--g2);color:var(--on);font-weight:700}
+.datebar{background:var(--bg);border-bottom:1px solid var(--line)}
+.datebar input,.chipbtn{background:var(--card);color:var(--text);border:1px solid var(--line)}
+.chipbtn.on{background:var(--g2);color:var(--on);border-color:var(--g2)}
+.greet{background:none;-webkit-text-fill-color:currentColor;color:var(--text);font-size:24px;font-weight:800;letter-spacing:-.4px;display:block;margin:6px 0 2px}
+.item{margin:8px 12px;border:1px solid var(--line);border-radius:18px;background:var(--card);padding:14px;border-bottom:1px solid var(--line)}
+.item:hover{background:var(--card);filter:none}
+.av{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--g3),var(--g2));color:var(--on);box-shadow:none;font-weight:800}
+.av.ok{background:linear-gradient(135deg,var(--g2),#7fff7a);color:var(--on)}
+.av.bad{background:linear-gradient(135deg,var(--red),#ff9a6b);color:#fff}
+.name{font-size:16px;font-weight:700;color:var(--text)}
+.sub{color:var(--muted)}
+.nav{background:var(--card);border-top:1px solid var(--line);box-shadow:none;border-radius:0}
+.nav button{color:var(--muted);font-weight:600}
+.nav button.on{color:var(--g2);font-weight:800}
+.nav span{transform:none}
+.nav button.on span{transform:scale(1.1)}
+.fab{background:var(--g2);color:var(--on);box-shadow:0 10px 28px rgba(198,255,61,.25);font-weight:700;width:60px;height:60px;bottom:90px}
+.btn{background:var(--g2);color:var(--on);box-shadow:none;border-radius:14px;font-weight:800;padding:14px;letter-spacing:.2px}
+.btn.gh{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.red{background:var(--red);color:#fff}
+.btn:active{transform:scale(.98)}
+input,textarea,select{background:var(--bg);border:1px solid var(--line);border-radius:14px;color:var(--text)}
+.sheet{background:var(--card);border-radius:28px 28px 0 0;border-top:1px solid var(--line)}
+.sheet h3{font-size:20px;font-weight:800}
+.seg button{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:14px;font-weight:700}
+.seg button.on,.seg button.on.p,.seg button.on.r{background:var(--g2);color:var(--on);border-color:var(--g2)}
+.seg button.on.a{background:var(--red);color:#fff;border-color:var(--red)}
+.lbl{color:var(--muted);text-transform:none;font-size:13px}
+.cards{gap:10px}
+.card2{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;box-shadow:none}
+.card2 b{font-size:28px;font-weight:800;color:var(--g2);letter-spacing:-.5px}
+.card2 span{color:var(--muted);font-weight:600}
+.card3{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:none}
+.card3 h4{color:var(--text);font-size:16px;font-weight:800}
+.profile{background:linear-gradient(135deg,var(--g3),var(--g2));color:var(--on);border-radius:24px;padding:20px;margin:14px 14px 0;box-shadow:none}
+.profile b{font-size:18px}
+.pav{background:rgba(0,0,0,.18);color:#fff;width:60px;height:60px}
+.barrow{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:6px 12px;padding:10px 14px}
+.bar{background:var(--line);height:8px;border-radius:99px}
+.bar div{background:linear-gradient(90deg,var(--g3),var(--g2));border-radius:99px}
+.bar div.bad{background:var(--red)}
+.bv{font-weight:800;color:var(--g2)}
+table{background:var(--card);border-radius:16px;overflow:hidden}
+th{color:var(--muted);text-transform:none}
+td,th{border-bottom:1px solid var(--line)}
+.badge{border-radius:99px;font-weight:700;padding:4px 10px;box-shadow:none}
+.b-p{background:var(--g2);color:var(--on)} .b-a{background:var(--red);color:#fff} .b-r{background:var(--amber);color:var(--on)}
+.empty{color:var(--muted)}
+a{color:var(--g2)}
+#logo{height:38px;max-width:140px;object-fit:contain;border-radius:6px}
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="top"><button id="back" data-act="back" style="display:none">›</button><h2 id="title"></h2><span id="ro" class="pill" style="display:none">للقراءة فقط</span></div>
+  <div class="top"><button id="back" data-act="back" style="display:none">›</button><img id="logo" alt="" style="display:none"><h2 id="title"></h2><span id="ro" class="pill" style="display:none">للقراءة فقط</span></div>
   <div id="datebar" class="datebar" style="display:none"><input type="date" id="dateIn"><button class="chipbtn" id="bulkBtn" data-act="bulkOpen">تسجيل جماعي</button></div>
   <div id="scroll" class="scroll"></div>
   <button class="fab" id="fab" data-act="fab">+</button>
@@ -119,7 +223,7 @@ td:first-child{text-align:right;white-space:nowrap}
 <script>
 const MAX={devoir:20,cahier:20,participation:5,comportement:5};
 const SKEY='suivi-settings';
-const DEF={teacher:'',school:'',year:'',w:{devoir:50,cahier:20,participation:15,comportement:15},pass:10,abs:5,theme:'auto'};
+const DEF={teacher:'',school:'',year:'',w:{devoir:50,cahier:20,participation:15,comportement:15},pass:10,abs:5,theme:'auto',photo:'',logo:''};
 let SET=JSON.parse(JSON.stringify(DEF));
 let W={...DEF.w};
 function applySettings(){
@@ -133,8 +237,8 @@ function loadSettings(){
 const TN={devoir:'الفروض',cahier:'تصحيح الدفتر',participation:'المشاركة',comportement:'السلوك'};
 const PRES={p:['حاضر','b-p'],a:['غائب','b-a'],r:['متأخر','b-r']};
 const LS='suivi-v2';
-const S={tab:'home',cls:null,date:new Date().toISOString().slice(0,10),bulk:false,bulkType:'devoir',bulkLabel:'',sheet:null};
-let db=null,user=null,RO=false,roster={},recs=[],importCls=null;
+const S={ctype:'bar',cmetric:'avg',tab:'home',cls:null,date:new Date().toISOString().slice(0,10),bulk:false,bulkType:'devoir',bulkLabel:'',sheet:null};
+let db=null,user=null,RO=false,roster={},recs=[],importCls=null,importMode='roster',chartObj=null;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(x,t)=>x===null?'—':(x*MAX[t]).toFixed(1).replace(/\.0$/,'');
@@ -203,8 +307,9 @@ function viewClass(){
 }
 function viewBulk(){
   const st=roster[S.cls]||[];
+  const lk=(findRec(S.cls,'',S.date,'fiche',S.bulkLabel.trim())||{}).value||'';
   if(!st.length) return `<div class="empty">لا يوجد تلاميذ في هذا القسم.</div>`;
-  const head=`<div class="sec"><div class="row2"><button class="chipbtn ${S.bulkType==='devoir'?'on':''}" data-act="bt" data-v="devoir">فرض</button><button class="chipbtn ${S.bulkType==='cahier'?'on':''}" data-act="bt" data-v="cahier">دفتر</button></div><div class="row2" style="margin-top:8px"><input id="bLabel" placeholder="اسم الفرض (لإدخال العلامات)" value="${esc(S.bulkLabel)}"><button class="btn gh" style="margin-top:0;width:auto;padding:9px 12px" data-act="allPresent">الكل حاضر</button></div><p class="muted">كل خانة تُحفظ فور تغييرها. الخانات فارغة تعني أنه لم يُسجل شيء.</p></div>`;
+  const head=`<div class="sec"><div class="row2"><button class="chipbtn ${S.bulkType==='devoir'?'on':''}" data-act="bt" data-v="devoir">فرض</button><button class="chipbtn ${S.bulkType==='cahier'?'on':''}" data-act="bt" data-v="cahier">دفتر</button></div><div class="row2" style="margin-top:8px"><input id="bLabel" placeholder="اسم الفرض (لإدخال العلامات)" value="${esc(S.bulkLabel)}"><button class="btn gh" style="margin-top:0;width:auto;padding:9px 12px" data-act="allPresent">الكل حاضر</button></div><div class="row2" style="margin-top:8px"><input id="bLink" placeholder="رابط PDF للفرض (من Drive)" value="${esc(lk)}"><button class="btn gh" style="margin-top:0;width:auto;padding:9px 12px" data-act="saveLink">حفظ الرابط</button></div>${lk?`<p class="muted"><a href="${esc(lk)}" target="_blank" style="color:var(--g2)">فتح ملف الفرض</a></p>`:''}<p class="muted">كل خانة تُحفظ فور تغييرها. الخانات فارغة تعني أنه لم يُسجل شيء.</p></div>`;
   const rows=st.map(n=>{
     const p=findRec(S.cls,n,S.date,'presence',''),pa=findRec(S.cls,n,S.date,'participation',''),co=findRec(S.cls,n,S.date,'comportement',''),ex=S.bulkLabel.trim()?findRec(S.cls,n,S.date,S.bulkType,S.bulkLabel.trim()):null;
     const e=esc(n);
@@ -219,12 +324,14 @@ function viewStats(){
   const bars=cs.ss.map(s=>`<div class="barrow"><div class="bn">${esc(s.n)}</div><div class="bar"><div class="${s.tot!==null&&s.tot<SET.pass?'bad':''}" style="width:${s.tot===null?0:Math.min(100,s.tot*5)}%"></div></div><div class="bv">${s.tot===null?'—':s.tot.toFixed(1)}</div></div>`).join('');
   return `<div class="sec"><select data-ctl="statcls">${ks.map(k=>`<option ${k===c?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
   <div class="cards"><div class="card2"><b>${cs.count}</b><span>تلميذ</span></div><div class="card2"><b>${cs.att===null?'—':cs.att+'%'}</b><span>نسبة الحضور</span></div><div class="card2"><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b><span>متوسط القسم /20</span></div><div class="card2"><b>${cs.risk}</b><span>دون 10/20</span></div><div class="card2"><b>${cs.ab}</b><span>غيابات</span></div><div class="card2"><b>${cs.re}</b><span>تأخرات</span></div><div class="card2"><b>${cs.ss.filter(x=>x.ab>=SET.abs).length}</b><span>غياب مرتفع</span></div></div>
+  <div class="sec card3"><div class="row2"><select data-ctl="ctype">${[['bar','أعمدة'],['hbar','أعمدة أفقية'],['line','خطي'],['pie','دائري'],['doughnut','حلقي']].map(o=>`<option value="${o[0]}" ${S.ctype===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select><select data-ctl="cmetric"><option value="avg" ${S.cmetric==='avg'?'selected':''}>المعدلات</option><option value="att" ${S.cmetric==='att'?'selected':''}>الغياب</option></select></div><canvas id="chartC" style="margin-top:10px;max-height:320px"></canvas></div>
   <div class="sec lbl">المعدل لكل تلميذ</div>${bars||'<div class="empty">لا تلاميذ</div>'}`;
 }
 function viewSettings(){
   const f=(id,label,val,type,extra)=>`<label>${label}<input id="${id}" type="${type||'text'}" value="${esc(val)}" ${extra||''}></label>`;
-  return `<div class="profile"><div class="pav">${esc((SET.teacher||'م').charAt(0))}</div><div><b>${esc(SET.teacher||'المعلم')}</b><div style="opacity:.85;font-size:13px">${esc(SET.school||'المؤسسة')} ${esc(SET.year?'· '+SET.year:'')}</div></div></div>
+  return `<div class="profile"><div class="pav">${SET.photo?`<img src="${SET.photo}" style="width:54px;height:54px;border-radius:50%;object-fit:cover">`:esc((SET.teacher||'م').charAt(0))}</div><div><b>${esc(SET.teacher||'المعلم')}</b><div style="opacity:.85;font-size:13px">${esc(SET.school||'المؤسسة')} ${esc(SET.year?'· '+SET.year:'')}</div></div></div>
   <div class="sec card3"><h4>الملف الشخصي</h4>${f('sName','الاسم الكامل',SET.teacher)}${f('sSchool','المؤسسة',SET.school)}${f('sYear','السنة الدراسية',SET.year,'text','placeholder="2026-2027"')}</div>
+  <div class="sec card3"><h4>الصور</h4><label>صورة الأستاذ<input type="file" accept="image/*" data-img="photo"></label><label>شعار المؤسسة<input type="file" accept="image/*" data-img="logo"></label><p class="note">تُحفظ الصورة على هذا الجهاز، والحجم الأقصى 300 KB.</p></div>
   <div class="sec card3"><h4>معامل المعدل</h4><p class="note">نسب تقريبية، يُعاد حسابها تلقائيا حتى لو لم يكن مجموعها 100.</p>${f('sDev','الفروض (%)',SET.w.devoir,'number','min="0" max="100"')}${f('sCah','تصحيح الدفتر (%)',SET.w.cahier,'number','min="0" max="100"')}${f('sPart','المشاركة (%)',SET.w.participation,'number','min="0" max="100"')}${f('sComp','السلوك (%)',SET.w.comportement,'number','min="0" max="100"')}</div>
   <div class="sec card3"><h4>التنبيهات</h4>${f('sPass','حد النجاح من 20',SET.pass,'number','min="0" max="20" step="0.5"')}${f('sAbs','تنبيه عند عدد غيابات يساوي أو يفوق',SET.abs,'number','min="1"')}</div>
   <div class="sec card3"><h4>المظهر</h4><label>المظهر<select id="sTheme"><option value="auto" ${SET.theme==='auto'?'selected':''}>تلقائي حسب الهاتف</option><option value="light" ${SET.theme==='light'?'selected':''}>فاتح</option><option value="dark" ${SET.theme==='dark'?'selected':''}>داكن</option></select></label></div>
@@ -240,6 +347,10 @@ function viewExport(){
   <div class="sec"><button class="btn" data-act="xRoster">لائحة كل الأقسام (Excel)</button><button class="btn gh" data-act="xClassRoster">لائحة ${esc(c)} (Excel)</button></div>
   <div class="sec lbl">الحصيلة والتقارير</div>
   <div class="sec"><button class="btn" data-act="xStats">حصيلة ${esc(c)} (Excel، عدة أوراق)</button><button class="btn gh" data-act="xReport">تقرير ${esc(c)} (HTML للطباعة)</button></div>
+  <div class="sec lbl">الغياب والنتائج</div>
+  <div class="sec"><button class="btn" data-act="xAbs">ملف الغياب لليوم المختار (Excel)</button></div>
+  <div class="sec card3"><h4>استيراد نقط الفروض أو الدفتر</h4><p class="note">ملف Excel فيه عمودان: التلميذ والعلامة من 20.</p><input id="impLabel" placeholder="اسم الفرض أو الدفتر"><select id="impType" style="margin-top:6px"><option value="devoir">فرض</option><option value="cahier">دفتر</option></select><button class="btn" data-act="importGrades">استيراد النقط من Excel</button></div>
+  <div class="sec card3"><h4>استيراد الغياب</h4><p class="note">ملف Excel فيه التلميذ والحالة (حاضر، غائب، متأخر) والتاريخ اختياريا.</p><button class="btn gh" data-act="importAtt">استيراد الغياب من Excel</button></div>
   <div class="sec"><p class="muted">التقرير ملف HTML: افتحه بعد التنزيل ثم اختر طباعة أو حفظ كـ PDF.</p></div>`;
 }
 
@@ -299,10 +410,47 @@ function xStats(c){
 function xReport(c){
   const cs=classStats(c);
   const rows=cs.ss.map(s=>`<tr><td>${esc(s.n)}</td><td>${s.ab}</td><td>${s.re}</td><td>${fmt(s.v.devoir,'devoir')}</td><td>${fmt(s.v.cahier,'cahier')}</td><td>${fmt(s.v.participation,'participation')}</td><td>${fmt(s.v.comportement,'comportement')}</td><td><b>${s.tot===null?'—':s.tot.toFixed(1)}</b></td></tr>`).join('');
-  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body><h1>تقرير القسم ${esc(c)}</h1><p>${esc(SET.school||'')} ${esc(SET.teacher?'· '+SET.teacher:'')} ${esc(SET.year?'· '+SET.year:'')}</p><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p></body></html>`;
+  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#e8f3ef}.k{display:inline-block;margin:6px 14px 6px 0}</style></head><body>${SET.logo?`<img src="${SET.logo}" style="max-height:90px;max-width:100%;display:block;margin:0 auto 10px">`:''}<h1>تقرير القسم ${esc(c)}</h1><p>${esc(SET.school||'')} ${esc(SET.teacher?'· '+SET.teacher:'')} ${esc(SET.year?'· '+SET.year:'')}</p><p class="k">عدد التلاميذ: <b>${cs.count}</b></p><p class="k">نسبة الحضور: <b>${cs.att===null?'—':cs.att+'%'}</b></p><p class="k">متوسط القسم: <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></p><p class="k">دون 10/20: <b>${cs.risk}</b></p><table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#666;font-size:12px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p></body></html>`;
   saveFile('تقرير-'+c+'.html',html);
 }
 
+function xAbsence(c,d){
+  const lab={p:'حاضر',a:'غائب',r:'متأخر'};
+  const aoa=[['التاريخ','القسم','التلميذ','الحالة']].concat((roster[c]||[]).map(n=>{const p=findRec(c,n,d,'presence','');return [d,c,n,p?lab[p.value]:'—'];}));
+  xlsxSave('غياب-'+c+'-'+d+'.xlsx',[['الغياب',aoa]]);
+}
+async function importResults(wb,mode){
+  const c=curCls(); if(!c) return alert('أضف قسما أولا');
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,blankrows:false,defval:''});
+  if(rows.length<2) return alert('الملف فارغ');
+  const head=rows[0].map(x=>String(x).trim());
+  const ni=Math.max(0,head.findIndex(h=>/التلميذ|الاسم|name|student/i.test(h)));
+  const vi=head.findIndex(h=>mode==='grades'?/علامة|نقطة|نقط|grade|note/i.test(h):/حالة|status/i.test(h));
+  const di=head.findIndex(h=>/التاريخ|date/i.test(h));
+  const vcol=vi>=0?vi:(mode==='grades'?1:2);
+  const names=new Set(roster[c]||[]);
+  const st={'حاضر':'p','p':'p','present':'p','غائب':'a','a':'a','absent':'a','متأخر':'r','r':'r','late':'r'};
+  let ok=0,bad=0;
+  for(const r of rows.slice(1)){
+    const n=String(r[ni]??'').trim();
+    if(!n||!names.has(n)){bad++;continue;}
+    if(mode==='grades'){
+      const v=Number(r[vcol]);
+      if(String(r[vcol]).trim()===''||isNaN(v)||v<0||v>20){bad++;continue;}
+      const old=findRec(c,n,S.date,S.impType,S.impLabel);
+      enqueue(()=>putRec(old,{cls:c,student:n,date:S.date,type:S.impType,label:S.impLabel,value:v}));ok++;
+    }else{
+      const k=st[String(r[vcol]).trim().toLowerCase()];
+      if(!k){bad++;continue;}
+      let d=S.date;
+      if(di>=0&&r[di]!==''){d=typeof r[di]==='number'?XLSX.SSF.format('yyyy-mm-dd',r[di]):String(r[di]).slice(0,10);}
+      const old=findRec(c,n,d,'presence','');
+      enqueue(()=>putRec(old,{cls:c,student:n,date:d,type:'presence',label:'',value:k}));ok++;
+    }
+  }
+  alert('تم استيراد '+ok+' سطرا'+(bad?'\nتم تجاهل '+bad+' سطر (اسم غير موجود في القسم أو قيمة غير صالحة)':''));
+  render();
+}
 function xTemplate(){
   xlsxSave('نموذج-لائحة-التلاميذ.xlsx',[['اللائحة',[['القسم','التلميذ'],['1AC','اسم التلميذ الأول'],['1AC','اسم التلميذ الثاني']]]]);
 }
@@ -311,6 +459,7 @@ fileIn.addEventListener('change',async()=>{
   const f=fileIn.files[0]; fileIn.value=''; if(!f) return;
   if(!window.XLSX) return alert('مكتبة Excel غير متاحة، تحقق من الاتصال بالإنترنت');
   const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+  if(importMode!=='roster'){const m=importMode;importMode='roster';await importResults(wb,m);return;}
   let fallback=importCls;
   if(!fallback && wb.SheetNames.length===1) fallback=(prompt('اسم القسم لهذه اللائحة؟','')||'').trim();
   importCls=null;
@@ -339,6 +488,13 @@ fileIn.addEventListener('change',async()=>{
 });
 
 /* ---------- عرض ---------- */
+function readImg(el){
+  const f=el.files[0]; if(!f) return;
+  if(f.size>300*1024){alert('الصورة كبيرة، اختر صورة أصغر من 300 KB');el.value='';return;}
+  const r=new FileReader();
+  r.onload=()=>{SET[el.dataset.img]=r.result;try{localStorage.setItem(SKEY,JSON.stringify(SET));}catch(e){alert('تعذر حفظ الصورة');}render();};
+  r.readAsDataURL(f);
+}
 function render(){
   if(S.cls&&!roster[S.cls])S.cls=null;
   const inClass=S.tab==='home'&&S.cls;
@@ -358,11 +514,29 @@ function render(){
   else if(S.tab==='settings') h=viewSettings();
   else h=viewExport();
   $('#scroll').innerHTML=h;
+  const lg=$('#logo');if(SET.logo){lg.src=SET.logo;lg.style.display='block';}else lg.style.display='none';
+  if(S.tab==='stats') drawChart();
   if(S.sheet) drawSheet();
 }
 
+function drawChart(){
+  const cv=$('#chartC'); if(!cv||!window.Chart) return;
+  const c=curCls(); if(!c) return;
+  const cs=classStats(c), t=S.ctype, pie=t==='pie'||t==='doughnut';
+  let labels,data,label;
+  if(S.cmetric==='att'&&pie){
+    const pr=recs.filter(r=>r.cls===c&&r.type==='presence');
+    labels=['حاضر','غائب','متأخر'];data=['p','a','r'].map(k=>pr.filter(r=>r.value===k).length);label='الحضور';
+  }else if(S.cmetric==='att'){
+    labels=cs.ss.map(x=>x.n);data=cs.ss.map(x=>x.ab);label='عدد الغيابات';
+  }else{
+    labels=cs.ss.map(x=>x.n);data=cs.ss.map(x=>x.tot===null?0:+x.tot.toFixed(1));label='المعدل /20';
+  }
+  if(chartObj) chartObj.destroy();
+  chartObj=new Chart(cv,{type:t==='hbar'?'bar':t,data:{labels,datasets:[{label,data,backgroundColor:pie?['#25d366','#e53935','#f59e0b']:'#128c7e',borderColor:'#128c7e',tension:.3}]},options:{indexAxis:t==='hbar'?'y':'x',responsive:true,plugins:{legend:{display:pie}},scales:pie?{}:{y:{beginAtZero:true}}}});
+}
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet'];
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs'];
 document.addEventListener('click',e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
@@ -422,12 +596,21 @@ document.addEventListener('click',e=>{
     S.bulk=false;persistRoster();render();
   }
   else if(a==='tplX'){xTemplate();}
+  else if(a==='xAbs'){xAbsence(curCls(),S.date);}
+  else if(a==='importGrades'){S.impLabel=$('#impLabel').value.trim();S.impType=$('#impType').value;if(!S.impLabel){alert('اكتب اسم الفرض أو الدفتر أولا');return;}importMode='grades';fileIn.click();}
+  else if(a==='importAtt'){importMode='att';fileIn.click();}
+  else if(a==='saveLink'){
+    const u=$('#bLink').value.trim();
+    if(!S.bulkLabel.trim()){alert('اكتب اسم الفرض أولا');return;}
+    if(u&&!/^https?:\/\//.test(u)){alert('ضع رابطا يبدأ بـ https');return;}
+    setVal('','fiche',S.bulkLabel.trim(),u||null);alert('تم حفظ الرابط');
+  }
   else if(a==='saveSet'){
     const num=(id,lo,hi)=>{const v=Number($(id).value);return (isNaN(v)||v<lo||v>hi)?null:v;};
     const w={devoir:num('#sDev',0,100),cahier:num('#sCah',0,100),participation:num('#sPart',0,100),comportement:num('#sComp',0,100)};
     const pass=num('#sPass',0,20), abs=num('#sAbs',1,99);
     if(Object.values(w).includes(null)||pass===null||abs===null){alert('تحقق من القيم المدخلة');return;}
-    SET={teacher:$('#sName').value.trim(),school:$('#sSchool').value.trim(),year:$('#sYear').value.trim(),w,pass,abs,theme:$('#sTheme').value};
+    SET={...SET,teacher:$('#sName').value.trim(),school:$('#sSchool').value.trim(),year:$('#sYear').value.trim(),w,pass,abs,theme:$('#sTheme').value};
     try{localStorage.setItem(SKEY,JSON.stringify(SET));}catch(e){}
     applySettings();alert('تم حفظ الإعدادات');render();
   }
@@ -444,6 +627,9 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const c=e.target;
   if(c.dataset.ctl==='statcls'){S.cls=c.value;render();return;}
+  if(c.dataset.ctl==='ctype'){S.ctype=c.value;render();return;}
+  if(c.dataset.ctl==='cmetric'){S.cmetric=c.value;render();return;}
+  if(c.dataset.img){readImg(c);return;}
   if(c.id==='dateIn'){S.date=c.value||S.date;render();return;}
   if(c.id==='bLabel'){S.bulkLabel=c.value;render();return;}
   if(c.dataset.st!==undefined){
