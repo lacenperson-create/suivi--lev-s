@@ -203,10 +203,12 @@ td,th{border-bottom:1px solid var(--line)}
 .empty{color:var(--muted)}
 a{color:var(--g2)}
 #logo{height:38px;max-width:140px;object-fit:contain;border-radius:6px}
+#banner{display:block;width:100%;max-height:120px;object-fit:contain;background:#fff;padding:8px 0;flex:none}
 </style>
 </head>
 <body>
 <div id="app">
+  <img id="banner" alt="" style="display:none">
   <div class="top"><button id="back" data-act="back" style="display:none">›</button><img id="logo" alt="" style="display:none"><h2 id="title"></h2><span id="ro" class="pill" style="display:none">للقراءة فقط</span></div>
   <div id="datebar" class="datebar" style="display:none"><input type="date" id="dateIn"><button class="chipbtn" id="bulkBtn" data-act="bulkOpen">تسجيل جماعي</button></div>
   <div id="scroll" class="scroll"></div>
@@ -288,7 +290,7 @@ function classStats(c){
 /* ---------- views ---------- */
 function viewHome(){
   const ks=Object.keys(roster);
-  const intro=`<div class="sec"><div class="greet">${esc(SET.teacher?'مرحبا، '+SET.teacher:'مرحبا بك')}</div><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><div class="row2"><button class="btn" data-act="importHome">استيراد لائحة من Excel</button><button class="btn gh" data-act="tplX">تنزيل نموذج Excel</button></div></div>`;
+  const intro=`<div class="sec"><div class="greet">${esc(SET.teacher?'مرحبا، '+SET.teacher:'مرحبا بك')}</div><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><div class="row2"><button class="btn" data-act="importHome">استيراد لائحة من Excel</button><button class="btn gh" data-act="xRoster">تصدير اللائحة (Excel)</button></div><div class="row2"><button class="btn gh" data-act="tplX">تنزيل نموذج Excel</button></div></div>`;
   if(!ks.length) return intro+`<div class="empty">لا توجد أقسام بعد.</div>`;
   return intro+ks.map(c=>{const cs=classStats(c);return `<div class="item" data-act="open" data-cls="${esc(c)}"><div class="av ${cs.avg===null?'':cs.avg>=SET.pass?'ok':'bad'}">${esc(c.slice(0,2))}</div><div class="grow"><div class="name">${esc(c)}</div><div class="sub">${cs.count} تلميذ · الحضور ${cs.att===null?'—':cs.att+'%'}</div></div></div>`;}).join('');
 }
@@ -384,9 +386,11 @@ function closeSheet(){S.sheet=null;$('#ov').classList.remove('open');}
 
 /* ---------- Excel / téléchargements ---------- */
 async function saveFile(filename,data){
-  let dl=null; try{dl=await window.claude.use('downloads');}catch(e){}
-  if(!dl) return alert('التنزيل غير متاح في هذه النسخة');
-  try{await dl.save({filename,data});}catch(e){ if(e.code!=='declined') alert('تعذر التنزيل'); }
+  let dl=null; try{ if(window.claude) dl=await window.claude.use('downloads'); }catch(e){}
+  if(dl){ try{await dl.save({filename,data});}catch(e){ if(e.code!=='declined') alert('تعذر التنزيل'); } return; }
+  const url=URL.createObjectURL(new Blob([data]));
+  const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
 }
 async function xlsxSave(filename,sheets){
   if(!window.XLSX) return alert('مكتبة Excel غير متاحة حاليا، تحقق من الاتصال بالإنترنت');
@@ -514,7 +518,8 @@ function render(){
   else if(S.tab==='settings') h=viewSettings();
   else h=viewExport();
   $('#scroll').innerHTML=h;
-  const lg=$('#logo');if(SET.logo){lg.src=SET.logo;lg.style.display='block';}else lg.style.display='none';
+  const bn=$('#banner');if(SET.logo){bn.src=SET.logo;bn.style.display='block';}else bn.style.display='none';
+  $('#logo').style.display='none';
   if(S.tab==='stats') drawChart();
   if(S.sheet) drawSheet();
 }
@@ -649,6 +654,8 @@ document.addEventListener('change',e=>{
   }
 });
 
+window.addEventListener('error',e=>alert('خطأ: '+(e.message||'غير معروف')));
+window.addEventListener('unhandledrejection',e=>alert('تعذر تنفيذ العملية: '+((e.reason&&e.reason.message)||e.reason||'خطأ غير معروف')));
 /* ---------- البداية ---------- */
 async function init(){
   try{ if(window.claude){ db=await window.claude.use('db'); user=await window.claude.use('user'); } }catch(e){}
