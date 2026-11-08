@@ -366,6 +366,9 @@ function viewSettings(){
   <div class="sec note" style="text-align:center;padding:16px">الإصدار 2.0 · الإعدادات محفوظة على هذا الجهاز</div>`;
 }
 function viewExport(){
+  const cc=curCls();
+  const labs=[...new Set(recs.filter(r=>r.cls===cc&&r.type==='devoir').map(r=>r.label))].filter(Boolean);
+  const examOpts=labs.length?labs.map(l=>`<option>${esc(l)}</option>`).join(''):'<option value="">لا توجد فروض بعد</option>';
   const ks=Object.keys(roster);
   if(!ks.length) return `<div class="empty">لا توجد بيانات لتصديرها بعد.</div>`;
   const c=curCls();
@@ -378,8 +381,7 @@ function viewExport(){
   <div class="sec"><button class="btn" data-act="shStats">إرسال حصيلة القسم</button><button class="btn gh" data-act="shAbs">إرسال الغياب اليومي</button></div>
   <div class="sec lbl">الغياب والنتائج</div>
   <div class="sec"><button class="btn" data-act="xAbs">ملف الغياب اليومي (PDF)</button></div>
-  <div class="sec card3"><h4>استيراد نقط الفروض أو الدفتر</h4><p class="note">ملف Excel فيه عمودان: التلميذ والعلامة من 20.</p><input id="impLabel" placeholder="اسم الفرض أو الدفتر"><select id="impType" style="margin-top:6px"><option value="devoir">فرض</option><option value="cahier">دفتر</option></select><button class="btn" data-act="importGrades">استيراد النقط من Excel</button></div>
-  <div class="sec card3"><h4>استيراد الغياب</h4><p class="note">ملف Excel فيه التلميذ والحالة (حاضر، غائب، متأخر) والتاريخ اختياريا.</p><button class="btn gh" data-act="importAtt">استيراد الغياب من Excel</button></div>
+  <div class="sec card3"><h4>تصدير نقط الفروض</h4><p class="note">اختر الفرض (الفرض 1 أو 2 أو 3...) ثم صدّر نقطه لكل التلاميذ.</p><select id="expLabel">${examOpts}</select><div class="row2"><button class="btn" data-act="xExam">تصدير نقط الفرض (Excel)</button><button class="btn gh" data-act="shExam">إرسال عبر واتساب</button></div></div>
   <div class="sec"><p class="muted">التقرير ملف HTML: افتحه بعد التنزيل ثم اختر طباعة أو حفظ كـ PDF.</p></div>`;
 }
 
@@ -530,6 +532,19 @@ th{background:#e8f3ef}
 </body></html>`;
   printHTML(html,'غياب-'+c+'-'+d+'.pdf');
 }
+function xExam(){
+  const c=curCls(), lab=($('#expLabel')||{}).value||'';
+  if(!c||!lab){SHARE_TEXT=null;return alert('لا يوجد فرض مختار، أضف علامات فرض أولا');}
+  const rows=(roster[c]||[]).map(n=>{
+    const r=recs.filter(x=>x.cls===c&&x.student===n&&x.type==='devoir'&&x.label===lab).sort(sortDate).pop();
+    return {n,v:r?r.value:null,d:r?r.date:'—'};
+  });
+  const nums=rows.map(x=>x.v).filter(v=>v!==null);
+  const avg=nums.length?(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(1):'—';
+  const aoa=[['التلميذ','العلامة /20','التاريخ']].concat(rows.map(x=>[x.n,x.v===null?'—':x.v,x.d]),[['Valeur moyenne / القيمة المتوسطة',avg,'']]);
+  const sheet=lab.replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31);
+  xlsxSave('نقط-'+lab+'-'+c+'.xlsx',[[sheet,aoa]]);
+}
 function xAbsence(c,d){
   if(SHARE_TEXT!==null) return xAbsenceXlsx(c,d);
   printAbsence(c,d);
@@ -663,7 +678,7 @@ function drawChart(){
   chartObj=new Chart(cv,{type:t==='hbar'?'bar':t,data:{labels,datasets:[{label,data,backgroundColor:pie?['#25d366','#e53935','#f59e0b']:'#128c7e',borderColor:'#128c7e',tension:.3}]},options:{indexAxis:t==='hbar'?'y':'x',responsive:true,plugins:{legend:{display:pie}},scales:pie?{}:{y:{beginAtZero:true}}}});
 }
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat'];
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat','xExam','shExam'];
 document.addEventListener('click',async e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
@@ -742,8 +757,8 @@ document.addEventListener('click',async e=>{
   }
   else if(a==='logout'){localStorage.removeItem(SESS);S.cls=null;S.tab='home';render();}
   else if(a==='xAbs'){xAbsence(curCls(),S.date);}
-  else if(a==='importGrades'){S.impLabel=$('#impLabel').value.trim();S.impType=$('#impType').value;if(!S.impLabel){alert('اكتب اسم الفرض أو الدفتر أولا');return;}importMode='grades';fileIn.click();}
-  else if(a==='importAtt'){importMode='att';fileIn.click();}
+  else if(a==='xExam'){xExam();}
+  else if(a==='shExam'){const c=curCls();if(!c)return alert('أضف قسما أولا');const l=($('#expLabel')||{}).value||'';SHARE_TEXT=textFor(c)+'\nنقط الفرض: '+l;xExam();}
   else if(a==='saveLink'){
     const u=$('#bLink').value.trim();
     if(!S.bulkLabel.trim()){alert('اكتب اسم الفرض أولا');return;}
