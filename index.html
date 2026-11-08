@@ -204,6 +204,7 @@ td,th{border-bottom:1px solid var(--line)}
 a{color:var(--g2)}
 #logo{height:38px;max-width:140px;object-fit:contain;border-radius:6px}
 #banner{display:block;width:100%;max-height:120px;object-fit:contain;background:#fff;padding:8px 0;flex:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -239,6 +240,7 @@ function loadSettings(){
   applySettings();
 }
 const TN={devoir:'الفروض',cahier:'تصحيح الدفتر',participation:'المشاركة',comportement:'السلوك'};
+const CATS=[['presence','الغياب'],['participation','المشاركة'],['comportement','السلوك'],['devoir','الفروض'],['cahier','تصحيح الدفتر']];
 const PRES={p:['حاضر','b-p'],a:['غائب','b-a'],r:['متأخر','b-r']};
 const LS='suivi-v2';
 const S={ctype:'bar',cmetric:'avg',tab:'home',cls:null,date:new Date().toISOString().slice(0,10),bulk:false,bulkType:'devoir',bulkLabel:'',sheet:null};
@@ -298,7 +300,7 @@ function viewHome(){
 }
 function viewClass(){
   const st=roster[S.cls]||[];
-  const tools=`<div class="sec row2"><button class="btn" data-act="bulkOpen">تسجيل جماعي للحصة</button></div><div class="sec row2"><button class="btn gh" data-act="addStudents">إضافة تلاميذ</button><button class="btn gh" data-act="importX">استيراد Excel</button></div>`;
+  const tools=`<div class="sec row2"><div class="chips" style="width:100%">${CATS.map(([k,l])=>`<button class="chipbtn" data-act="bcat" data-v="${k}">${l}</button>`).join('')}</div></div><div class="sec row2"><button class="btn gh" data-act="addStudents">إضافة تلاميذ</button><button class="btn gh" data-act="importX">استيراد Excel</button></div>`;
   if(!st.length) return tools+`<div class="empty">لا يوجد تلاميذ في هذا القسم.</div>`;
   const rows=st.map(n=>{
     const p=findRec(S.cls,n,S.date,'presence',''),pa=findRec(S.cls,n,S.date,'participation',''),co=findRec(S.cls,n,S.date,'comportement','');
@@ -311,15 +313,27 @@ function viewClass(){
 }
 function viewBulk(){
   const st=roster[S.cls]||[];
-  const lk=(findRec(S.cls,'',S.date,'fiche',S.bulkLabel.trim())||{}).value||'';
-  if(!st.length) return `<div class="empty">لا يوجد تلاميذ في هذا القسم.</div>`;
-  const head=`<div class="sec"><div class="row2"><button class="chipbtn ${S.bulkType==='devoir'?'on':''}" data-act="bt" data-v="devoir">فرض</button><button class="chipbtn ${S.bulkType==='cahier'?'on':''}" data-act="bt" data-v="cahier">دفتر</button></div><div class="row2" style="margin-top:8px"><input id="bLabel" placeholder="اسم الفرض (لإدخال العلامات)" value="${esc(S.bulkLabel)}"><button class="btn gh" style="margin-top:0;width:auto;padding:9px 12px" data-act="allPresent">الكل حاضر</button></div><div class="row2" style="margin-top:8px"><input id="bLink" placeholder="رابط PDF للفرض (من Drive)" value="${esc(lk)}"><button class="btn gh" style="margin-top:0;width:auto;padding:9px 12px" data-act="saveLink">حفظ الرابط</button></div>${lk?`<p class="muted"><a href="${esc(lk)}" target="_blank" style="color:var(--g2)">فتح ملف الفرض</a></p>`:''}<p class="muted">كل خانة تُحفظ فور تغييرها. الخانات فارغة تعني أنه لم يُسجل شيء.</p></div>`;
-  const rows=st.map(n=>{
-    const p=findRec(S.cls,n,S.date,'presence',''),pa=findRec(S.cls,n,S.date,'participation',''),co=findRec(S.cls,n,S.date,'comportement',''),ex=S.bulkLabel.trim()?findRec(S.cls,n,S.date,S.bulkType,S.bulkLabel.trim()):null;
+  const cat=S.bcat||'presence',isEx=cat==='devoir'||cat==='cahier';
+  const chips=`<div class="chips">${CATS.map(([k,l])=>`<button class="chipbtn ${k===cat?'on':''}" data-act="bcat" data-v="${k}">${l}</button>`).join('')}</div>`;
+  if(!st.length) return `<div class="sec">${chips}</div><div class="empty">لا يوجد تلاميذ في هذا القسم.</div>`;
+  let extra='';
+  if(isEx){
+    const link=(findRec(S.cls,'',S.date,'fiche',S.bulkLabel.trim())||{}).value||'';
+    extra=`<div class="row2" style="margin-top:8px"><input id="bLabel" placeholder="اسم الفرض أو الدفتر" value="${esc(S.bulkLabel)}"><input id="bLink" placeholder="رابط PDF (اختياري)" value="${esc(link)}"></div><div class="row2" style="margin-top:6px"><button class="btn gh" style="margin-top:0" data-act="saveLink">حفظ الرابط</button>${link?`<a class="btn gh" style="margin-top:0;text-align:center;text-decoration:none" href="${esc(link)}" target="_blank">فتح الملف</a>`:''}</div>`;
+  }else if(cat==='presence'){
+    extra=`<div class="row2" style="margin-top:8px"><button class="btn gh" style="margin-top:0" data-act="allPresent">الكل حاضر</button></div>`;
+  }
+  const head=`<div class="sec">${chips}${extra}<p class="muted">كل خانة تُحفظ فور تغييرها. الخانة الفارغة تعني أنه لم يُسجل شيء.</p></div>`;
+  const cell=n=>{
     const e=esc(n);
-    return `<tr><td>${e}</td><td><select data-st="${e}" data-f="presence"><option value="">—</option><option value="p" ${p&&p.value==='p'?'selected':''}>حاضر</option><option value="a" ${p&&p.value==='a'?'selected':''}>غائب</option><option value="r" ${p&&p.value==='r'?'selected':''}>متأخر</option></select></td><td><input type="number" min="0" max="5" data-st="${e}" data-f="participation" value="${pa?pa.value:''}"></td><td><input type="number" min="0" max="5" data-st="${e}" data-f="comportement" value="${co?co.value:''}"></td><td><input type="number" min="0" max="20" step="0.5" data-st="${e}" data-f="exam" value="${ex?ex.value:''}"></td></tr>`;
-  }).join('');
-  return head+`<div class="tablewrap"><table><thead><tr><th>التلميذ</th><th>الحضور</th><th>مشاركة /5</th><th>سلوك /5</th><th>علامة /20</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    if(cat==='presence'){const p=findRec(S.cls,n,S.date,'presence','');return `<select data-st="${e}" data-f="presence"><option value="">—</option><option value="p" ${p&&p.value==='p'?'selected':''}>حاضر</option><option value="a" ${p&&p.value==='a'?'selected':''}>غائب</option><option value="r" ${p&&p.value==='r'?'selected':''}>متأخر</option></select>`;}
+    if(isEx){const r=S.bulkLabel.trim()?findRec(S.cls,n,S.date,cat,S.bulkLabel.trim()):null;return `<input type="number" min="0" max="20" step="0.5" data-st="${e}" data-f="exam" value="${r?r.value:''}">`;}
+    const r=findRec(S.cls,n,S.date,cat,'');
+    return `<input type="number" min="0" max="5" data-st="${e}" data-f="${cat}" value="${r?r.value:''}">`;
+  };
+  const colH=cat==='presence'?'الحالة':isEx?'العلامة /20':CATS.find(c=>c[0]===cat)[1]+' /5';
+  const rows=st.map(n=>`<tr><td>${esc(n)}</td><td>${cell(n)}</td></tr>`).join('');
+  return head+`<div class="tablewrap"><table><thead><tr><th>التلميذ</th><th>${colH}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function viewStats(){
   const ks=Object.keys(roster);
@@ -441,7 +455,7 @@ function xStats(c){
   xlsxSave('حصيلة-'+c+'.xlsx',[['الحصيلة',s1],['الغياب',s2],['العلامات',s3]]);
 }
 function xReport(c){
-  const withStats=confirm('هل تريد إضافة الإحصائيات (المخطط وملخص الأرقام) إلى التقرير؟\n\nموافق: مع الإحصائيات\nإلغاء: الجداول فقط');
+  const withStats=confirm('هل تريد إضافة الإحصائيات (المخطط وملخص الأرقام) إلى التقرير؟\n\nموافق: مع الإحصائيات\nإلغاء: جدول التلاميذ فقط');
   const cs=classStats(c),ss=cs.ss,n=ss.length||1;
   const mean=a=>{const v=a.filter(x=>x!==null);return v.length?v.reduce((p,x)=>p+x,0)/v.length:null;};
   const cav={};['devoir','cahier','participation','comportement'].forEach(t=>cav[t]=mean(ss.map(x=>x.v[t])));
@@ -455,41 +469,26 @@ function xReport(c){
   const grid=[0,5,10,15,20].map(v=>`<line x1="${pad}" x2="${W-pad}" y1="${y(v)}" y2="${y(v)}" stroke="#e5e7eb"/><text x="${pad-6}" y="${y(v)+4}" font-size="10" text-anchor="end" fill="#6b7280">${v}</text>`).join('');
   const avgLine=cs.avg===null?'':`<line x1="${pad}" x2="${W-pad}" y1="${y(cs.avg)}" y2="${y(cs.avg)}" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 4"/><text x="${W-pad}" y="${(y(cs.avg)-6).toFixed(1)}" font-size="11" fill="#b45309" text-anchor="end">Valeur moyenne ${cs.avg.toFixed(1)}</text>`;
   const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="histogramme des moyennes">${grid}${bars}${avgLine}</svg>`;
-  const section=(title,heads,rows,avg)=>`<div class="sec"><h3>${title}</h3><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}<tr class="moy">${avg}</tr></tbody></table></div>`;
-  const simple=(key,label,max)=>{
-    const rows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td>${fx(x.v[key],key)}</td></tr>`).join('');
-    const avg=`<td>Valeur moyenne / القيمة المتوسطة</td><td>${fx(cav[key],key)}</td>`;
-    return section(label,['التلميذ',max],rows,avg);
-  };
-  const absRows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.ab}</td><td>${x.re}</td></tr>`).join('');
-  const absSec=section('الغياب والتأخر',['التلميذ','غياب','تأخر'],absRows,`<td>Valeur moyenne / القيمة المتوسطة</td><td>${(cs.ab/n).toFixed(1)}</td><td>${(cs.re/n).toFixed(1)}</td>`);
-  const genRows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td><b>${x.tot===null?'—':x.tot.toFixed(1)}</b></td></tr>`).join('');
-  const genSec=section('المعدل العام /20',['التلميذ','المعدل /20'],genRows,`<td>Valeur moyenne / القيمة المتوسطة</td><td><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b></td>`);
+  const rows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.ab}</td><td>${x.re}</td><td>${fx(x.v.devoir,'devoir')}</td><td>${fx(x.v.cahier,'cahier')}</td><td>${fx(x.v.participation,'participation')}</td><td>${fx(x.v.comportement,'comportement')}</td><td><b>${x.tot===null?'—':x.tot.toFixed(1)}</b></td></tr>`).join('');
+  const avgRow=`<tr class="moy"><td>Valeur moyenne / القيمة المتوسطة</td><td>${(cs.ab/n).toFixed(1)}</td><td>${(cs.re/n).toFixed(1)}</td><td>${fx(cav.devoir,'devoir')}</td><td>${fx(cav.cahier,'cahier')}</td><td>${fx(cav.participation,'participation')}</td><td>${fx(cav.comportement,'comportement')}</td><td><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b></td></tr>`;
   const statsBlock=!withStats?'':`<div class="kpis"><span class="k">عدد التلاميذ <b>${cs.count}</b></span><span class="k">نسبة الحضور <b>${cs.att===null?'—':cs.att+'%'}</b></span><span class="k">Valeur moyenne / المتوسط <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></span><span class="k">دون ${SET.pass}/20 <b>${cs.risk}</b></span></div><div class="box"><h3 style="margin:0 0 6px">معدلات التلاميذ (أعمدة)</h3>${svg}</div>`;
   const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>
 body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}
 h1{font-size:22px;margin:6px 0}
-h3{margin:18px 0 6px;color:#0b7a6e}
 .head{text-align:center;margin-bottom:16px}
 .head img{max-height:160px;max-width:100%;display:block;margin:0 auto 12px}
 .k{display:inline-block;margin:4px 14px 4px 0;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px}
 .k b{font-size:18px;color:#0b7a6e}
 .kpis{margin-top:16px}
-.sec{break-inside:avoid;margin-bottom:10px}
-table{width:100%;border-collapse:collapse;font-size:13px}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
 th,td{border:1px solid #d1d5db;padding:6px;text-align:center}
 th{background:#e8f3ef}
 tr.moy td{background:#fff7e6;font-weight:700}
 .box{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:14px}
-@media print{body{margin:12mm}}
+@media print{body{margin:12mm}.box,table{break-inside:avoid}}
 </style></head><body>
 <div class="head">${SET.logo?`<img src="${SET.logo}" alt="">`:''}<h1>تقرير القسم ${esc(c)}</h1><p>${esc(SET.school||'')} ${esc(SET.teacher?'· '+SET.teacher:'')} ${esc(SET.year?'· '+SET.year:'')}</p></div>
-${simple('devoir','الفروض',"/20")}
-${simple('cahier','تصحيح الدفتر',"/20")}
-${simple('participation','المشاركة',"/5")}
-${simple('comportement','السلوك',"/5")}
-${absSec}
-${genSec}
+<table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}${avgRow}</tbody></table>
 ${statsBlock}
 <p style="color:#6b7280;font-size:12px;margin-top:16px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p>
 </body></html>`;
@@ -625,7 +624,7 @@ function drawChart(){
   chartObj=new Chart(cv,{type:t==='hbar'?'bar':t,data:{labels,datasets:[{label,data,backgroundColor:pie?['#25d366','#e53935','#f59e0b']:'#128c7e',borderColor:'#128c7e',tension:.3}]},options:{indexAxis:t==='hbar'?'y':'x',responsive:true,plugins:{legend:{display:pie}},scales:pie?{}:{y:{beginAtZero:true}}}});
 }
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs'];
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat'];
 document.addEventListener('click',async e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
@@ -641,6 +640,7 @@ document.addEventListener('click',async e=>{
   else if(a==='importX'){importCls=S.cls;fileIn.click();}
   else if(a==='importHome'){importCls=null;fileIn.click();}
   else if(a==='bulkOpen'){S.bulk=true;render();}
+  else if(a==='bcat'){S.bcat=t.dataset.v;S.bulkType=S.bcat;S.bulk=true;render();}
   else if(a==='bulkClose'){S.bulk=false;render();}
   else if(a==='bt'){S.bulkType=t.dataset.v;render();}
   else if(a==='allPresent'){(roster[S.cls]||[]).forEach(n=>{if(!findRec(S.cls,n,S.date,'presence',''))setVal(n,'presence','','p');});}
