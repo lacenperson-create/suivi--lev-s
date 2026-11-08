@@ -377,7 +377,7 @@ function viewExport(){
   <div class="sec lbl">إرسال عبر واتساب</div>
   <div class="sec"><button class="btn" data-act="shStats">إرسال حصيلة القسم</button><button class="btn gh" data-act="shAbs">إرسال الغياب اليومي</button></div>
   <div class="sec lbl">الغياب والنتائج</div>
-  <div class="sec"><button class="btn" data-act="xAbs">ملف الغياب لليوم المختار (Excel)</button></div>
+  <div class="sec"><button class="btn" data-act="xAbs">ملف الغياب اليومي (PDF)</button></div>
   <div class="sec card3"><h4>استيراد نقط الفروض أو الدفتر</h4><p class="note">ملف Excel فيه عمودان: التلميذ والعلامة من 20.</p><input id="impLabel" placeholder="اسم الفرض أو الدفتر"><select id="impType" style="margin-top:6px"><option value="devoir">فرض</option><option value="cahier">دفتر</option></select><button class="btn" data-act="importGrades">استيراد النقط من Excel</button></div>
   <div class="sec card3"><h4>استيراد الغياب</h4><p class="note">ملف Excel فيه التلميذ والحالة (حاضر، غائب، متأخر) والتاريخ اختياريا.</p><button class="btn gh" data-act="importAtt">استيراد الغياب من Excel</button></div>
   <div class="sec"><p class="muted">التقرير ملف HTML: افتحه بعد التنزيل ثم اختر طباعة أو حفظ كـ PDF.</p></div>`;
@@ -495,7 +495,46 @@ ${statsBlock}
   saveFile('تقرير-'+c+'.html',html);
 }
 
+function printHTML(html,fname){
+  const f=document.createElement('iframe');
+  f.style.cssText='position:fixed;width:1px;height:1px;opacity:0;border:0;right:0;bottom:0';
+  document.body.appendChild(f);
+  const fallback=()=>{f.remove();saveFile(fname.replace(/\.pdf$/,'.html'),html);alert('تم تنزيل الملف. افتحه ثم اختر طباعة ← حفظ كـ PDF');};
+  try{
+    f.onload=()=>{try{f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),30000);}catch(e){fallback();}};
+    f.srcdoc=html;
+  }catch(e){fallback();}
+}
+function printAbsence(c,d){
+  const lab={p:'حاضر',a:'غائب',r:'متأخر'};
+  const stt=(roster[c]||[]).map(n=>{const p=findRec(c,n,d,'presence','');return {n,v:p?p.value:''};});
+  const cnt=k=>stt.filter(x=>x.v===k).length;
+  const rows=stt.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}</td><td class="${x.v}">${x.v?lab[x.v]:'—'}</td></tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>كشف الغياب ${esc(c)} ${d}</title><style>
+@page{size:A4;margin:14mm}
+body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0}
+.head{text-align:center}
+.head img{max-height:120px;max-width:100%;display:block;margin:0 auto 8px}
+h1{font-size:20px;margin:4px 0}
+.meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13px;margin:10px 0;border-bottom:2px solid #0b7a6e;padding-bottom:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid #888;padding:6px;text-align:center}
+th{background:#e8f3ef}
+.a{color:#b91c1c;font-weight:700}.r{color:#b45309;font-weight:700}.p{color:#166534}
+.sum{margin-top:12px;font-size:13px}
+</style></head><body>
+<div class="head">${SET.logo?`<img src="${SET.logo}" alt="">`:''}<h1>كشف الغياب اليومي</h1></div>
+<div class="meta"><span>القسم: <b>${esc(c)}</b></span><span>التاريخ: <b>${d}</b></span><span>${esc(SET.school||'')}</span></div>
+<table><thead><tr><th>#</th><th>التلميذ</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>
+<p class="sum">حاضر: <b>${cnt('p')}</b> · غائب: <b>${cnt('a')}</b> · متأخر: <b>${cnt('r')}</b>${SET.teacher?' · الأستاذ: '+esc(SET.teacher):''}</p>
+</body></html>`;
+  printHTML(html,'غياب-'+c+'-'+d+'.pdf');
+}
 function xAbsence(c,d){
+  if(SHARE_TEXT!==null) return xAbsenceXlsx(c,d);
+  printAbsence(c,d);
+}
+function xAbsenceXlsx(c,d){
   const lab={p:'حاضر',a:'غائب',r:'متأخر'};
   const aoa=[['التاريخ','القسم','التلميذ','الحالة']].concat((roster[c]||[]).map(n=>{const p=findRec(c,n,d,'presence','');return [d,c,n,p?lab[p.value]:'—'];}));
   xlsxSave('غياب-'+c+'-'+d+'.xlsx',[['الغياب',aoa]]);
