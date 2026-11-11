@@ -422,7 +422,7 @@ async function saveFile(filename,data){
   setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
 }
 async function shareFile(filename,data,text){
-  const type=filename.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'text/html';
+  const type=filename.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':filename.endsWith('.pdf')?'application/pdf':'text/html';
   const file=new File([data],filename,{type});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({files:[file],title:filename,text});return;}
@@ -507,7 +507,7 @@ function printHTML(html,fname){
     f.srcdoc=html;
   }catch(e){fallback();}
 }
-function printAbsence(c,d){
+function absenceHTML(c,d){
   const lab={p:'حاضر',a:'غائب',r:'متأخر'};
   const stt=(roster[c]||[]).map(n=>{const p=findRec(c,n,d,'presence','');return {n,v:p?p.value:''};});
   const cnt=k=>stt.filter(x=>x.v===k).length;
@@ -530,7 +530,32 @@ th{background:#e8f3ef}
 <table><thead><tr><th>#</th><th>التلميذ</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="sum">حاضر: <b>${cnt('p')}</b> · غائب: <b>${cnt('a')}</b> · متأخر: <b>${cnt('r')}</b>${SET.teacher?' · الأستاذ: '+esc(SET.teacher):''}</p>
 </body></html>`;
-  printHTML(html,'غياب-'+c+'-'+d+'.pdf');
+  return html;
+}
+function printAbsence(c,d){ printHTML(absenceHTML(c,d),'غياب-'+c+'-'+d+'.pdf'); }
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if(window.html2pdf) return res();
+    const sc=document.createElement('script');sc.src=src;sc.onload=res;
+    sc.onerror=()=>rej(new Error('تعذر تحميل مكتبة PDF، تحقق من الإنترنت'));
+    document.head.appendChild(sc);
+  });
+}
+async function shareAbsPdf(c,d,text){
+  let box=null;
+  try{
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+    const doc=new DOMParser().parseFromString(absenceHTML(c,d),'text/html');
+    box=document.createElement('div');
+    box.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1';
+    box.innerHTML='<style>'+doc.querySelector('style').textContent+'</style>'+doc.body.innerHTML;
+    document.body.appendChild(box);
+    const buf=await window.html2pdf().set({margin:10,image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(box).outputPdf('arraybuffer');
+    box.remove();box=null;
+    await shareFile('غياب-'+c+'-'+d+'.pdf',buf,text);
+  }catch(e){
+    alert('تعذر إنشاء PDF: '+(e.message||e));
+  }finally{ if(box) box.remove(); }
 }
 function xExam(){
   const c=curCls(), lab=($('#expLabel')||{}).value||'';
@@ -742,7 +767,7 @@ document.addEventListener('click',async e=>{
   }
   else if(a==='tplX'){xTemplate();}
   else if(a==='shStats'){const c=curCls();if(!c)return alert('أضف قسما أولا');SHARE_TEXT=textFor(c);xStats(c);}
-  else if(a==='shAbs'){const c=curCls();if(!c)return alert('أضف قسما أولا');SHARE_TEXT=textFor(c)+'\nالغياب ليوم '+S.date;xAbsence(c,S.date);}
+  else if(a==='shAbs'){const c=curCls();if(!c)return alert('أضف قسما أولا');shareAbsPdf(c,S.date,textFor(c)+'\nالغياب ليوم '+S.date);}
   else if(a==='signup'){
     const n=$('#aName').value.trim(),e=$('#aEmail').value.trim().toLowerCase(),p=$('#aPass').value,p2=$('#aPass2').value;
     if(!n||!/^\S+@\S+\.\S+$/.test(e))return alert('أدخل الاسم وبريدا إلكترونيا صالحا');
