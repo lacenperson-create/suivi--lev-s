@@ -327,9 +327,9 @@ function viewBulk(){
   const cell=n=>{
     const e=esc(n);
     if(cat==='presence'){const p=findRec(S.cls,n,S.date,'presence','');return `<select data-st="${e}" data-f="presence"><option value="">—</option><option value="p" ${p&&p.value==='p'?'selected':''}>حاضر</option><option value="a" ${p&&p.value==='a'?'selected':''}>غائب</option><option value="r" ${p&&p.value==='r'?'selected':''}>متأخر</option></select>`;}
-    if(isEx){const r=S.bulkLabel.trim()?findRec(S.cls,n,S.date,cat,S.bulkLabel.trim()):null;return `<input type="number" min="0" max="20" step="0.5" data-st="${e}" data-f="exam" value="${r?r.value:''}">`;}
+    if(isEx){const r=S.bulkLabel.trim()?findRec(S.cls,n,S.date,cat,S.bulkLabel.trim()):null;return `<input enterkeyhint="next" type="number" min="0" max="20" step="0.5" data-st="${e}" data-f="exam" value="${r?r.value:''}">`;}
     const r=findRec(S.cls,n,S.date,cat,'');
-    return `<input type="number" min="0" max="5" data-st="${e}" data-f="${cat}" value="${r?r.value:''}">`;
+    return `<input enterkeyhint="next" type="number" min="0" max="5" data-st="${e}" data-f="${cat}" value="${r?r.value:''}">`;
   };
   const colH=cat==='presence'?'الحالة':isEx?'العلامة /20':CATS.find(c=>c[0]===cat)[1]+' /5';
   const rows=st.map(n=>`<tr><td>${esc(n)}</td><td>${cell(n)}</td></tr>`).join('');
@@ -654,7 +654,9 @@ function render(){
   else if(S.tab==='stats') h=viewStats();
   else if(S.tab==='settings') h=viewSettings();
   else h=viewExport();
+  const ae=document.activeElement,key=ae&&ae.dataset&&ae.dataset.st!==undefined?ae.dataset.st+'|'+ae.dataset.f:null;
   $('#scroll').innerHTML=h;
+  if(key){const el=[...document.querySelectorAll('#scroll [data-st]')].find(x=>x.dataset.st+'|'+x.dataset.f===key);if(el)el.focus();}
   const bn=$('#banner');if(SET.logo){bn.src=SET.logo;bn.style.display='block';}else bn.style.display='none';
   $('#logo').style.display='none';
   if(S.tab==='stats') drawChart();
@@ -784,6 +786,15 @@ document.addEventListener('click',async e=>{
   else if(a==='xStats'){xStats(curCls());}
   else if(a==='xReport'){xReport(curCls());}
 });
+function focusNext(el){
+  const all=[...document.querySelectorAll('#scroll [data-st]')];
+  const nx=all[all.indexOf(el)+1];
+  if(nx){nx.focus();if(nx.select)nx.select();}
+}
+document.addEventListener('keydown',e=>{
+  const t=e.target;
+  if(e.key==='Enter'&&t&&t.dataset&&t.dataset.st!==undefined){e.preventDefault();focusNext(t);}
+});
 document.addEventListener('change',e=>{
   const c=e.target;
   if(c.dataset.ctl==='statcls'){S.cls=c.value;render();return;}
@@ -795,7 +806,7 @@ document.addEventListener('change',e=>{
   if(c.dataset.st!==undefined){
     if(RO){alert('هذا التطبيق للقراءة فقط بالنسبة لك');render();return;}
     const st=c.dataset.st,f=c.dataset.f,v=c.value;
-    if(f==='presence'){setVal(st,'presence','',v);return;}
+    if(f==='presence'){setVal(st,'presence','',v);focusNext(c);return;}
     if(f==='exam'){
       const label=S.bulkLabel.trim();
       if(v===''){ if(label) setVal(st,S.bulkType,label,''); return; }
