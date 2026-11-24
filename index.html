@@ -352,12 +352,18 @@ function buildXlsx(sheets){
 async function toPdf(html){
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
   const doc=new DOMParser().parseFromString(html,'text/html');
+  const raw=doc.querySelector('style')?doc.querySelector('style').textContent:'';
+  const css=raw.replace(/@page[^}]*\}/g,'').replace(/(^|\})\s*body\s*\{/g,'$1 .pdfbox{');
   const box=document.createElement('div');
-  box.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1';
-  box.innerHTML='<style>'+(doc.querySelector('style')?doc.querySelector('style').textContent:'')+'</style>'+doc.body.innerHTML;
+  box.className='pdfbox';
+  box.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;color:#111;z-index:99999;padding:20px;direction:rtl';
+  box.innerHTML='<style>'+css+'</style>'+doc.body.innerHTML;
   document.body.appendChild(box);
   try{
-    return await window.html2pdf().set({margin:10,image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(box).outputPdf('arraybuffer');
+    await new Promise(r=>setTimeout(r,300));
+    const buf=await window.html2pdf().set({margin:10,image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(box).outputPdf('arraybuffer');
+    if(!buf||buf.byteLength<2000) throw new Error('الملف الناتج فارغ، أعد المحاولة');
+    return buf;
   }finally{box.remove();}
 }
 async function deliver(base,html,sheets,share,text){
