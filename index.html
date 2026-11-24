@@ -377,7 +377,7 @@ function drawTable(ctx,tbl,x0,y,CW){
     const lines=r.map(c=>wrapLines(ctx,c.t,cw-12));
     const h=Math.max(...lines.map(l=>l.length))*21+14;
     r.forEach((c,i)=>{
-      const x=x0+i*cw;
+      const x=x0+(n-1-i)*cw;
       ctx.fillStyle=c.th?'#e8f3ef':(c.moy?'#fff7e6':'#ffffff');
       ctx.fillRect(x,yy,cw,h);
       ctx.strokeStyle='#888';ctx.strokeRect(x,yy,cw,h);
@@ -521,7 +521,7 @@ function reportHTML(c,withStats,ct){
   const rows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.ab}</td><td>${x.re}</td><td>${fxn(x.v.devoir,'devoir')}</td><td>${fxn(x.v.cahier,'cahier')}</td><td>${fxn(x.v.participation,'participation')}</td><td>${fxn(x.v.comportement,'comportement')}</td><td><b>${x.tot===null?'—':x.tot.toFixed(1)}</b></td></tr>`).join('');
   const avgRow=`<tr class="moy"><td>Valeur moyenne / القيمة المتوسطة</td><td>${(cs.ab/n).toFixed(1)}</td><td>${(cs.re/n).toFixed(1)}</td><td>${fxn(cav.devoir,'devoir')}</td><td>${fxn(cav.cahier,'cahier')}</td><td>${fxn(cav.participation,'participation')}</td><td>${fxn(cav.comportement,'comportement')}</td><td><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b></td></tr>`;
   const table=`<table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}${avgRow}</tbody></table>`;
-  const stats=`<div><span class="k">عدد التلاميذ <b>${cs.count}</b></span><span class="k">نسبة الحضور <b>${cs.att===null?'—':cs.att+'%'}</b></span><span class="k">Valeur moyenne <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></span><span class="k">دون ${SET.pass}/20 <b>${cs.risk}</b></span></div><h3>المخطط</h3><div class="box">${chartSVG(ct,ss,cs)}</div>${absBlocks(c)}`;
+  const stats=`<div><span class="k">عدد التلاميذ <b>${cs.count}</b></span><span class="k">نسبة الحضور <b>${cs.att===null?'—':cs.att+'%'}</b></span><span class="k">Valeur moyenne <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></span><span class="k">دون ${SET.pass}/20 <b>${cs.risk}</b></span></div>${absBlocks(c)}`;
   return headDoc('تقرير القسم '+c,table+(withStats?stats:''));
 }
 function examRows(c,lab){
