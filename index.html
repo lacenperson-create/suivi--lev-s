@@ -362,6 +362,7 @@ function buildXlsx(sheets){
 }
 const JSPDF_URL='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 const loadImg=src=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});
+function isoTok(t){return String(t).replace(/[A-Za-z0-9][A-Za-z0-9\-\.]*/g,m=>'\u2066'+m+'\u2069');}
 function wrapLines(ctx,text,maxW){
   const words=String(text).split(/\s+/),lines=[];let cur='';
   for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width<=maxW)cur=t;else{if(cur)lines.push(cur);cur=w;}}
@@ -369,7 +370,7 @@ function wrapLines(ctx,text,maxW){
   return lines.length?lines:[''];
 }
 function drawTable(ctx,tbl,x0,y,CW){
-  const rows=[...tbl.querySelectorAll('tr')].map(tr=>[...tr.children].map(c=>({t:c.textContent.replace(/\s+/g,' ').trim(),th:c.tagName==='TH',moy:tr.classList.contains('moy')})));
+  const rows=[...tbl.querySelectorAll('tr')].map(tr=>[...tr.children].map(c=>({t:isoTok(c.textContent.replace(/\s+/g,' ').trim()),th:c.tagName==='TH',moy:tr.classList.contains('moy')})));
   const n=Math.max(1,...rows.map(r=>r.length)),cw=CW/n;
   let yy=y;
   rows.forEach(r=>{
@@ -411,7 +412,7 @@ async function drawNode(ctx,el,st,W,PAD){
     const big=tag==='H1';
     ctx.font=`bold ${big?26:18}px Tahoma, Arial, sans-serif`;
     ctx.fillStyle=big?'#111':'#0b7a6e';ctx.textAlign=big?'center':'right';
-    ctx.fillText(el.textContent.trim(),big?W/2:W-PAD,st.y+(big?30:18));
+    ctx.fillText(isoTok(el.textContent.trim()),big?W/2:W-PAD,st.y+(big?30:18));
     st.y+=big?44:30;return;
   }
   const kids=[...el.children];
@@ -419,7 +420,7 @@ async function drawNode(ctx,el,st,W,PAD){
     for(const k of kids) await drawNode(ctx,k,st,W,PAD);
     return;
   }
-  const txt=el.textContent.replace(/\s+/g,' ').trim();
+  const txt=isoTok(el.textContent.replace(/\s+/g,' ').trim());
   if(!txt) return;
   ctx.font='16px Tahoma, Arial, sans-serif';ctx.fillStyle='#111';ctx.textAlign='right';
   wrapLines(ctx,txt,CW).forEach(l=>{ctx.fillText(l,W-PAD,st.y+14);st.y+=22;});
@@ -735,11 +736,20 @@ function printHTML(html,fname){
     f.srcdoc=html;
   }catch(e){fallback();}
 }
+function splitCls(n){
+  const s=String(n).trim();
+  let m=s.match(/^(.*\S)\s+(\d?[A-Za-z]{1,5}-\d+)$/);
+  if(m) return [m[1],m[2]];
+  m=s.match(/^(\d?[A-Za-z]{1,5}-\d+)\s+(.+)$/);
+  if(m) return [m[2],m[1]];
+  return [s,''];
+}
+const nameWithCls=n=>{const [a,b]=splitCls(n);return esc(a)+(b?' '+esc(b):'');};
 function absenceHTML(c,d){
   const lab={p:'حاضر',a:'غائب',r:'متأخر'};
   const stt=(roster[c]||[]).map(n=>{const p=findRec(c,n,d,'presence','');return {n,v:p?p.value:''};});
   const cnt=k=>stt.filter(x=>x.v===k).length;
-  const rows=stt.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}</td><td class="${x.v}">${x.v?lab[x.v]:'—'}</td></tr>`).join('');
+  const rows=stt.map((x,i)=>`<tr><td>${i+1}</td><td>${nameWithCls(x.n)}</td><td class="${x.v}">${x.v?lab[x.v]:'—'}</td></tr>`).join('');
   const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>كشف الغياب ${esc(c)} ${d}</title><style>
 @page{size:A4;margin:14mm}
 body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0}
