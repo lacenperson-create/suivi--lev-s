@@ -1,4 +1,4 @@
-const CACHE="suivi-v2-app-32";
+const CACHE="suivi-v2-app-35";
 const ASSETS=["./","./index.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png"];
 self.addEventListener("install",e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));

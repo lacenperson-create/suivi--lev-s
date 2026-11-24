@@ -210,6 +210,16 @@ table.tt td{min-width:96px;vertical-align:top;text-align:right;font-size:12px}
 table.tt th{font-size:12px}
 .cover{display:block;width:100%;max-height:260px;object-fit:cover;object-position:center 30%;border-radius:0 0 22px 22px;margin:0 0 6px}
 .cover-auth{border-radius:22px;max-height:220px;margin:12px 14px 0;width:calc(100% - 28px)}
+.tg{width:100%;border-collapse:separate;border-spacing:6px;font-size:12px;min-width:620px}
+.tg th{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 4px;color:var(--muted);font-weight:700}
+.tg th.dy{color:var(--g2);font-size:13px;white-space:nowrap}
+.tg td{padding:0;vertical-align:top}
+.tg th.brk,.tg td.brk{width:18px;background:transparent;border:none;padding:0}
+.tcell{min-height:60px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);padding:6px;display:flex;flex-direction:column;gap:2px;cursor:pointer;text-align:center}
+.tcell b{font-size:13px}
+.tcell small{color:var(--muted);font-size:11px}
+.tcell.empty{align-items:center;justify-content:center;color:var(--muted);font-size:20px;border-style:dashed}
+.tg tr.today th.dy{background:var(--g2);color:var(--on);border-color:var(--g2)}
 </style>
 </head>
 <body>
@@ -223,6 +233,7 @@ table.tt th{font-size:12px}
     <button data-tab="home"><span>💬</span>الأقسام</button>
     <button data-tab="stats"><span>📊</span>الإحصائيات</button>
     <button data-tab="export"><span>📤</span>التصدير</button>
+    
     <button data-tab="tt"><span>🗓️</span>الجدول</button>
     <button data-tab="settings"><span>⚙️</span>الإعدادات</button>
   </div>
@@ -552,14 +563,21 @@ function ttSheet(){
   return [['اليوم',...sl]].concat(DAYS.map(d=>[d,...sl.map(s=>SET.tt.filter(x=>x.d===d&&x.s===s).map(x=>x.c+' - '+x.m).join(' + '))]));
 }
 function xTT(share,text){ deliver('جدول-الحصص',ttHTML(),[['الجدول',ttSheet()]],share,text); }
+const SLOTS=['08:00-09:00','09:00-10:00','10:00-11:00','11:00-12:00','14:00-15:00','15:00-16:00','16:00-17:00','17:00-18:00'];
+const slotLbl=sl=>sl.slice(0,2)+'–'+sl.slice(6,8);
 function viewTT(){
-  const sl=slotsOf();
-  const head=`<tr><th>اليوم</th>${sl.map(s=>`<th>${s}</th>`).join('')}</tr>`;
-  const body=DAYS.map(d=>`<tr><td><b>${d}</b></td>${sl.map(s=>`<td>${SET.tt.filter(x=>x.d===d&&x.s===s).map(x=>`<div><b>${esc(x.c)}</b><br><span class="muted">${esc(x.m)} · ${esc(x.r)}</span></div>`).join('')}</td>`).join('')}</tr>`).join('');
-  const txt=SET.tt.map(x=>[x.d,x.s,x.c,x.m,x.r].join(' | ')).join('\n');
-  return `${SET.tt.length?'':'<div class="sec"><button class="btn" data-act="loadTT">تعبئة بالجدول الأسبوعي المبدئي</button></div>'}<div class="sec"><div class="tablewrap"><table class="tt"><thead>${head}</thead><tbody>${body}</tbody></table></div></div>
-  <div class="sec card3"><h4>تعديل الجدول</h4><p class="note">سطر لكل حصة بهذا الشكل: اليوم | الوقت | القسم | المادة | القاعة</p><textarea id="ttTxt" style="min-height:220px;direction:ltr;text-align:right">${esc(txt)}</textarea><button class="btn" data-act="saveTT">حفظ الجدول</button><button class="btn red" data-act="clearTT">مسح الجدول لأملأه من جديد</button></div>
-  <div class="sec"><button class="btn gh" data-act="xTT">تنزيل الجدول</button></div>`;
+  const todayIdx=(new Date().getDay()+6)%7;
+  const pal=['#0b7a6e','#7c3aed','#db2777','#ea580c','#2563eb','#65a30d','#0891b2','#be123c'];
+  const colorOf=c=>{let h=0;for(const ch of String(c))h=(h*31+ch.charCodeAt(0))%997;return pal[h%pal.length];};
+  const cell=(d,sl)=>{
+    const x=SET.tt.find(t=>t.d===d&&t.s===sl);
+    return x?`<div class="tcell" style="border-color:${colorOf(x.c)}" data-act="editTT" data-d="${d}" data-s="${sl}"><b style="color:${colorOf(x.c)}">${esc(x.c)}</b><small>${esc(x.m)}${x.r?' · '+esc(x.r):''}</small></div>`
+      :`<div class="tcell empty" data-act="editTT" data-d="${d}" data-s="${sl}">+</div>`;
+  };
+  const head=`<tr><th class="dy">اليوم</th>${SLOTS.slice(0,4).map(sl=>`<th>${slotLbl(sl)}</th>`).join('')}<th class="brk">☕</th>${SLOTS.slice(4).map(sl=>`<th>${slotLbl(sl)}</th>`).join('')}</tr>`;
+  const rows=DAYS.map((d,i)=>`<tr class="${i===todayIdx?'today':''}"><th class="dy">${d}</th>${SLOTS.slice(0,4).map(sl=>`<td>${cell(d,sl)}</td>`).join('')}<td class="brk"></td>${SLOTS.slice(4).map(sl=>`<td>${cell(d,sl)}</td>`).join('')}</tr>`).join('');
+  return `<div class="sec"><p class="muted" style="margin:0 0 8px">اضغط على أي خانة لإضافة حصة أو تعديلها. الصباح من 08 إلى 12، والمساء من 14 إلى 18.</p><div class="tablewrap"><table class="tg"><thead>${head}</thead><tbody>${rows}</tbody></table></div></div>
+  <div class="sec row2"><button class="btn gh" data-act="xTT">تنزيل الجدول</button><button class="btn red" data-act="clearTT">مسح الجدول كله</button></div>`;
 }
 function todayHTML(){
   const names=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -638,6 +656,7 @@ function viewExport(){
   </div>
   <div class="sec lbl">تنزيل</div>
   <div class="sec"><button class="btn gh" data-act="xTT">جدول الحصص</button></div>
+  
   <div class="sec row2"><button class="btn" data-act="xRosterAll">لائحة كل الأقسام</button><button class="btn gh" data-act="xRosterCls">لائحة ${esc(cc)}</button></div>
   <div class="sec row2"><button class="btn" data-act="xReport">تقرير ${esc(cc)}</button><button class="btn gh" data-act="xAbs">الغياب اليومي</button></div>
   <div class="sec card3"><h4>نقط الفروض</h4><select id="expLabel">${exSel}</select><button class="btn" data-act="xExam">تنزيل نقط الفرض</button></div>
@@ -673,6 +692,15 @@ function drawSheet(){
     <button class="btn gh" data-act="close">تم</button>`;
   }else if(sh.type==='class'){
     h=`<h3>قسم جديد</h3><input id="inCls" placeholder="مثال: 1AC"><button class="btn" data-act="saveClass">إنشاء</button><button class="btn gh" data-act="close">إلغاء</button>`;
+  }else if(sh.type==='tt'){
+    const cur=SET.tt.find(t=>t.d===sh.d&&t.s===sh.s),v=cur||{c:'',m:'رياضيات',r:'12'};
+    h=`<h3>${sh.d} · ${slotLbl(sh.s)}</h3><p class="muted">أدخل القسم والمادة والقاعة لهذه الحصة.</p>
+    <div class="lbl">القسم</div><input id="ttC" list="ttList" value="${esc(v.c)}" placeholder="مثال: 1APIC-1"><datalist id="ttList">${Object.keys(roster).map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+    <div class="lbl">المادة</div><input id="ttM" value="${esc(v.m)}">
+    <div class="lbl">القاعة</div><input id="ttR" value="${esc(v.r)}">
+    <button class="btn" data-act="saveTT1">حفظ الحصة</button>
+    ${cur?'<button class="btn red" data-act="delTT1">حذف الحصة</button>':''}
+    <button class="btn gh" data-act="close">إلغاء</button>`;
   }else if(sh.type==='students'){
     h=`<h3>إضافة تلاميذ</h3><p class="muted">اكتب اسم تلميذ في كل سطر</p><textarea id="inSt"></textarea><button class="btn" data-act="saveSt">إضافة</button><button class="btn gh" data-act="close">إلغاء</button>`;
   }
@@ -974,8 +1002,8 @@ function render(){
   if(inClass) h=S.bulk?viewBulk():viewClass();
   else if(S.tab==='home') h=viewHome();
   else if(S.tab==='stats') h=viewStats();
-  else if(S.tab==='settings') h=viewSettings();
   else if(S.tab==='tt') h=viewTT();
+  else if(S.tab==='settings') h=viewSettings();
   else h=viewExport();
   const ae=document.activeElement,key=ae&&ae.dataset&&ae.dataset.st!==undefined?ae.dataset.st+'|'+ae.dataset.f:null;
   $('#scroll').innerHTML=h;
@@ -1091,6 +1119,28 @@ document.addEventListener('click',async e=>{
     if(!confirm('حذف أي جدول محفوظ في الرابط المشترك؟ جدولك على هذا الجهاز لن يتأثر.')) return;
     try{ await db.doc('timetable/main').delete(); alert('تم حذف الجدول من الرابط المشترك'); }
     catch(e){ alert('تعذر الحذف: '+(e.message||e)); }
+  }
+  else if(a==='addTT'){
+    const d=$('#tDay').value,t=$('#tTime').value.trim(),c=$('#tCls').value.trim(),m=$('#tSub').value.trim(),r=$('#tRoom').value.trim();
+    if(!t||!c) return alert('اكتب الوقت والقسم على الأقل');
+    SET.tt.push({d,s:t,c,m,r});persistTT();render();
+  }
+  else if(a==='delTT'){
+    SET.tt.splice(Number(t.dataset.i),1);persistTT();render();
+  }
+  else if(a==='editTT'){openSheet({type:'tt',d:t.dataset.d,s:t.dataset.s});}
+  else if(a==='saveTT1'){
+    const c=$('#ttC').value.trim();
+    if(!c) return alert('اكتب القسم أولا');
+    const sh=S.sheet;
+    SET.tt=SET.tt.filter(x=>!(x.d===sh.d&&x.s===sh.s));
+    SET.tt.push({d:sh.d,s:sh.s,c,m:$('#ttM').value.trim(),r:$('#ttR').value.trim()});
+    persistTT();closeSheet();render();
+  }
+  else if(a==='delTT1'){
+    const sh=S.sheet;
+    SET.tt=SET.tt.filter(x=>!(x.d===sh.d&&x.s===sh.s));
+    persistTT();closeSheet();render();
   }
   else if(a==='clearTT'){
     if(!confirm('مسح الجدول كله على هذا الجهاز؟')) return;
