@@ -206,6 +206,8 @@ a{color:var(--g2)}
 #banner{display:block;width:100%;max-height:120px;object-fit:contain;background:#fff;padding:8px 0;flex:none}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .ck{display:flex;gap:8px;align-items:center;margin:8px 0}.ck input{width:auto}
+table.tt td{min-width:96px;vertical-align:top;text-align:right;font-size:12px}
+table.tt th{font-size:12px}
 </style>
 </head>
 <body>
@@ -219,6 +221,7 @@ a{color:var(--g2)}
     <button data-tab="home"><span>💬</span>الأقسام</button>
     <button data-tab="stats"><span>📊</span>الإحصائيات</button>
     <button data-tab="export"><span>📤</span>التصدير</button>
+    <button data-tab="tt"><span>🗓️</span>الجدول</button>
     <button data-tab="settings"><span>⚙️</span>الإعدادات</button>
   </div>
   <div class="overlay" id="ov"><div class="sheet" id="sheet"></div></div>
@@ -229,7 +232,15 @@ const MAX={devoir:20,cahier:20,participation:5,comportement:5};
 const SKEY='suivi-settings';
 const AKEY='suivi-auth',SESS='suivi-session';
 let AUTH=null,SHARE_TEXT=null;
-const DEF={teacher:'',school:'',year:'',w:{devoir:50,cahier:20,participation:15,comportement:15},pass:10,abs:5,theme:'auto',photo:'',logo:''};
+const TT0=[
+['الإثنين','08:00-09:00','1APIC-1','رياضيات','12'],['الإثنين','09:00-10:00','1APIC-3','رياضيات','12'],['الإثنين','10:00-12:00','2APIC-4 + 2APIC-5','دعم الرياضيات','12'],
+['الثلاثاء','14:00-15:00','1APIC-2','رياضيات','12'],['الثلاثاء','15:00-16:00','1APIC-3','رياضيات','12'],['الثلاثاء','16:00-17:00','1APIC-1','رياضيات','12'],
+['الأربعاء','08:00-09:00','1APIC-3','رياضيات','12'],['الأربعاء','09:00-10:00','1APIC-2','رياضيات','12'],['الأربعاء','10:00-11:00','1APIC-1','رياضيات','12'],
+['الخميس','14:00-15:00','1APIC-3','رياضيات','12'],['الخميس','15:00-16:00','1APIC-2','رياضيات','12'],['الخميس','16:00-18:00','2APIC-1 + 2APIC-3 + 2APIC-2','دعم الرياضيات','12'],
+['الجمعة','08:00-09:00','1APIC-1','رياضيات','12'],['الجمعة','09:00-10:00','1APIC-2','رياضيات','12'],['الجمعة','10:00-11:00','1APIC-3','رياضيات','12'],
+['السبت','09:00-10:00','1APIC-1','رياضيات','12'],['السبت','10:00-11:00','1APIC-2','رياضيات','12']];
+const DAYS=['الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const DEF={teacher:'',school:'',year:'',w:{devoir:50,cahier:20,participation:15,comportement:15},pass:10,abs:5,theme:'auto',photo:'',logo:'',tt:TT0.map(([d,s,c,m,r])=>({d,s,c,m,r}))};
 let SET=JSON.parse(JSON.stringify(DEF));
 let W={...DEF.w};
 function applySettings(){
@@ -303,7 +314,7 @@ function dashHTML(){
 }
 function viewHome(){
   const ks=Object.keys(roster);
-  const intro=dashHTML()+`<div class="sec"><div class="greet">${esc(SET.teacher?'مرحبا، '+SET.teacher:'مرحبا بك')}</div><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><div class="row2"><button class="btn" data-act="importHome">استيراد لائحة من Excel</button><button class="btn gh" data-act="xRoster">تصدير اللائحة (Excel)</button></div><div class="row2"><button class="btn gh" data-act="tplX">تنزيل نموذج Excel</button></div></div>`;
+  const intro=dashHTML()+todayHTML()+`<div class="sec"><div class="greet">${esc(SET.teacher?'مرحبا، '+SET.teacher:'مرحبا بك')}</div><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><div class="row2"><button class="btn" data-act="importHome">استيراد لائحة من Excel</button><button class="btn gh" data-act="xRoster">تصدير اللائحة (Excel)</button></div><div class="row2"><button class="btn gh" data-act="tplX">تنزيل نموذج Excel</button></div></div>`;
   if(!ks.length) return intro+`<div class="empty">لا توجد أقسام بعد.</div>`;
   return intro+ks.map(c=>{const cs=classStats(c);return `<div class="item" data-act="open" data-cls="${esc(c)}"><div class="av ${cs.avg===null?'':cs.avg>=SET.pass?'ok':'bad'}">${esc(c.slice(0,2))}</div><div class="grow"><div class="name">${esc(c)}</div><div class="sub">${cs.count} تلميذ · الحضور ${cs.att===null?'—':cs.att+'%'}</div></div></div>`;}).join('');
 }
@@ -349,22 +360,93 @@ function buildXlsx(sheets){
   sheets.forEach(([n,a])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),n));
   return XLSX.write(wb,{bookType:'xlsx',type:'array'});
 }
+const JSPDF_URL='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+const loadImg=src=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});
+function wrapLines(ctx,text,maxW){
+  const words=String(text).split(/\s+/),lines=[];let cur='';
+  for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width<=maxW)cur=t;else{if(cur)lines.push(cur);cur=w;}}
+  if(cur)lines.push(cur);
+  return lines.length?lines:[''];
+}
+function drawTable(ctx,tbl,x0,y,CW){
+  const rows=[...tbl.querySelectorAll('tr')].map(tr=>[...tr.children].map(c=>({t:c.textContent.replace(/\s+/g,' ').trim(),th:c.tagName==='TH',moy:tr.classList.contains('moy')})));
+  const n=Math.max(1,...rows.map(r=>r.length)),cw=CW/n;
+  let yy=y;
+  rows.forEach(r=>{
+    ctx.font='15px Tahoma, Arial, sans-serif';
+    const lines=r.map(c=>wrapLines(ctx,c.t,cw-12));
+    const h=Math.max(...lines.map(l=>l.length))*21+14;
+    r.forEach((c,i)=>{
+      const x=x0+i*cw;
+      ctx.fillStyle=c.th?'#e8f3ef':(c.moy?'#fff7e6':'#ffffff');
+      ctx.fillRect(x,yy,cw,h);
+      ctx.strokeStyle='#888';ctx.strokeRect(x,yy,cw,h);
+      ctx.fillStyle='#111';ctx.textAlign='center';
+      ctx.font=(c.th||c.moy?'bold ':'')+'15px Tahoma, Arial, sans-serif';
+      lines[i].forEach((l,k)=>ctx.fillText(l,x+cw/2,yy+20+k*21));
+    });
+    yy+=h;
+  });
+  return yy;
+}
+async function drawNode(ctx,el,st,W,PAD){
+  const tag=el.tagName,CW=W-2*PAD;
+  if(!tag||tag==='STYLE'||tag==='SCRIPT') return;
+  if(tag==='IMG'){
+    const im=await loadImg(el.getAttribute('src'));
+    if(im){const h=Math.min(240,CW*im.height/im.width),w=h*im.width/im.height;ctx.drawImage(im,(W-w)/2,st.y,w,h);st.y+=h+16;}
+    return;
+  }
+  if(tag==='TABLE'){st.y=drawTable(ctx,el,PAD,st.y,CW)+18;return;}
+  if(tag==='SVG'){
+    const vb=(el.getAttribute('viewBox')||'0 0 640 300').split(/[ ,]+/).map(Number);
+    const h=CW*vb[3]/vb[2];
+    let xml=new XMLSerializer().serializeToString(el).replace(/ width="100%"/,'');
+    xml=xml.replace('<svg',`<svg width="${CW}" height="${h}"`);
+    const im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml));
+    if(im) ctx.drawImage(im,PAD,st.y,CW,h);
+    st.y+=h+16;return;
+  }
+  if(/^H[1-4]$/.test(tag)){
+    const big=tag==='H1';
+    ctx.font=`bold ${big?26:18}px Tahoma, Arial, sans-serif`;
+    ctx.fillStyle=big?'#111':'#0b7a6e';ctx.textAlign=big?'center':'right';
+    ctx.fillText(el.textContent.trim(),big?W/2:W-PAD,st.y+(big?30:18));
+    st.y+=big?44:30;return;
+  }
+  const kids=[...el.children];
+  if(kids.length&&(kids.some(k=>/^(TABLE|SVG|IMG|DIV|P|H[1-4])$/.test(k.tagName))||el.querySelector('table,svg,img'))){
+    for(const k of kids) await drawNode(ctx,k,st,W,PAD);
+    return;
+  }
+  const txt=el.textContent.replace(/\s+/g,' ').trim();
+  if(!txt) return;
+  ctx.font='16px Tahoma, Arial, sans-serif';ctx.fillStyle='#111';ctx.textAlign='right';
+  wrapLines(ctx,txt,CW).forEach(l=>{ctx.fillText(l,W-PAD,st.y+14);st.y+=22;});
+  st.y+=8;
+}
 async function toPdf(html){
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+  await loadScript(JSPDF_URL);
   const doc=new DOMParser().parseFromString(html,'text/html');
-  const raw=doc.querySelector('style')?doc.querySelector('style').textContent:'';
-  const css=raw.replace(/@page[^}]*\}/g,'').replace(/(^|\})\s*body\s*\{/g,'$1 .pdfbox{');
-  const box=document.createElement('div');
-  box.className='pdfbox';
-  box.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;color:#111;z-index:99999;padding:20px;direction:rtl';
-  box.innerHTML='<style>'+css+'</style>'+doc.body.innerHTML;
-  document.body.appendChild(box);
-  try{
-    await new Promise(r=>setTimeout(r,300));
-    const buf=await window.html2pdf().set({margin:10,image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(box).outputPdf('arraybuffer');
-    if(!buf||buf.byteLength<2000) throw new Error('الملف الناتج فارغ، أعد المحاولة');
-    return buf;
-  }finally{box.remove();}
+  const W=1000,PAD=40,MAXH=16000;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=MAXH;
+  const ctx=cv.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,MAXH);
+  const st={y:PAD};
+  for(const el of doc.body.children) await drawNode(ctx,el,st,W,PAD);
+  const H=Math.min(MAXH,Math.ceil(st.y+PAD));
+  const ph=Math.round(W*297/210);
+  const JsPDF=window.jspdf.jsPDF;
+  const pdf=new JsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+  for(let y=0,first=true;y<H;y+=ph,first=false){
+    const hh=Math.min(ph,H-y);
+    const pc=document.createElement('canvas');pc.width=W;pc.height=hh;
+    pc.getContext('2d').drawImage(cv,0,y,W,hh,0,0,W,hh);
+    if(!first) pdf.addPage();
+    pdf.addImage(pc.toDataURL('image/jpeg',0.92),'JPEG',0,0,210,hh*210/W);
+  }
+  const buf=pdf.output('arraybuffer');
+  if(!buf||buf.byteLength<2000) throw new Error('الملف الناتج فارغ');
+  return buf;
 }
 async function deliver(base,html,sheets,share,text){
   try{
@@ -451,6 +533,33 @@ function examHTML(c,lab){
   const tb=`<table><thead><tr><th>التلميذ</th><th>العلامة /20</th><th>التاريخ</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.v===null?'—':x.v}</td><td>${x.d}</td></tr>`).join('')}<tr class="moy"><td>Valeur moyenne / القيمة المتوسطة</td><td>${avg}</td><td></td></tr></tbody></table>`;
   return headDoc(lab+' - القسم '+c,tb);
 }
+function slotsOf(){return [...new Set(SET.tt.map(x=>x.s))].sort();}
+function ttHTML(){
+  const sl=slotsOf();
+  const th=`<th>اليوم</th>${sl.map(s=>`<th>${s}</th>`).join('')}`;
+  const tr=DAYS.map(d=>`<tr><td><b>${d}</b></td>${sl.map(s=>`<td>${SET.tt.filter(x=>x.d===d&&x.s===s).map(x=>`<b>${esc(x.c)}</b><br>${esc(x.m)} · ${esc(x.r)}`).join('<hr>')}</td>`).join('')}</tr>`).join('');
+  return headDoc('جدول الحصص',`<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`);
+}
+function ttSheet(){
+  const sl=slotsOf();
+  return [['اليوم',...sl]].concat(DAYS.map(d=>[d,...sl.map(s=>SET.tt.filter(x=>x.d===d&&x.s===s).map(x=>x.c+' - '+x.m).join(' + '))]));
+}
+function xTT(share,text){ deliver('جدول-الحصص',ttHTML(),[['الجدول',ttSheet()]],share,text); }
+function viewTT(){
+  const sl=slotsOf();
+  const head=`<tr><th>اليوم</th>${sl.map(s=>`<th>${s}</th>`).join('')}</tr>`;
+  const body=DAYS.map(d=>`<tr><td><b>${d}</b></td>${sl.map(s=>`<td>${SET.tt.filter(x=>x.d===d&&x.s===s).map(x=>`<div><b>${esc(x.c)}</b><br><span class="muted">${esc(x.m)} · ${esc(x.r)}</span></div>`).join('')}</td>`).join('')}</tr>`).join('');
+  const txt=SET.tt.map(x=>[x.d,x.s,x.c,x.m,x.r].join(' | ')).join('\n');
+  return `<div class="sec"><div class="tablewrap"><table class="tt"><thead>${head}</thead><tbody>${body}</tbody></table></div></div>
+  <div class="sec card3"><h4>تعديل الجدول</h4><p class="note">سطر لكل حصة بهذا الشكل: اليوم | الوقت | القسم | المادة | القاعة</p><textarea id="ttTxt" style="min-height:220px;direction:ltr;text-align:right">${esc(txt)}</textarea><button class="btn" data-act="saveTT">حفظ الجدول</button></div>
+  <div class="sec"><button class="btn gh" data-act="xTT">تنزيل الجدول</button></div>`;
+}
+function todayHTML(){
+  const names=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const d=names[new Date().getDay()];
+  const list=SET.tt.filter(x=>x.d===d).sort((a,b)=>a.s.localeCompare(b.s));
+  return `<div class="sec card3"><h4>حصص اليوم (${d})</h4>${list.length?list.map(x=>`<div class="ck"><b>${x.s}</b> · ${esc(x.c)} · ${esc(x.m)} · ${esc(x.r)}</div>`).join(''):'<p class="note">لا توجد حصص اليوم</p>'}</div>`;
+}
 function viewBulk(){
   const st=roster[S.cls]||[];
   const cat=S.bcat||'presence',isEx=cat==='devoir'||cat==='cahier';
@@ -520,6 +629,7 @@ function viewExport(){
     <label class="ck"><input id="withStats" type="checkbox" ${S.wstats!==false?'checked':''}> إضافة الإحصائيات إلى التقرير</label>
   </div>
   <div class="sec lbl">تنزيل</div>
+  <div class="sec"><button class="btn gh" data-act="xTT">جدول الحصص</button></div>
   <div class="sec row2"><button class="btn" data-act="xRosterAll">لائحة كل الأقسام</button><button class="btn gh" data-act="xRosterCls">لائحة ${esc(cc)}</button></div>
   <div class="sec row2"><button class="btn" data-act="xReport">تقرير ${esc(cc)}</button><button class="btn gh" data-act="xAbs">الغياب اليومي</button></div>
   <div class="sec card3"><h4>نقط الفروض</h4><select id="expLabel">${exSel}</select><button class="btn" data-act="xExam">تنزيل نقط الفرض</button></div>
@@ -808,7 +918,7 @@ function render(){
   $('#dateIn').value=S.date;
   $('#bulkBtn').textContent=S.bulk?'العودة للقائمة':'تسجيل جماعي';
   $('#bulkBtn').dataset.act=S.bulk?'bulkClose':'bulkOpen';
-  $('#title').textContent=inClass?S.cls:({home:'متابعة التلاميذ',stats:'الإحصائيات',export:'التصدير',settings:'الإعدادات'})[S.tab];
+  $('#title').textContent=inClass?S.cls:({home:'متابعة التلاميذ',stats:'الإحصائيات',export:'التصدير',settings:'الإعدادات',tt:'الجدول'})[S.tab];
   $('#fab').style.display=(S.tab==='home'&&!inClass)?'block':'none';
   $('#ro').style.display=RO?'inline':'none';
   let h;
@@ -816,6 +926,7 @@ function render(){
   else if(S.tab==='home') h=viewHome();
   else if(S.tab==='stats') h=viewStats();
   else if(S.tab==='settings') h=viewSettings();
+  else if(S.tab==='tt') h=viewTT();
   else h=viewExport();
   const ae=document.activeElement,key=ae&&ae.dataset&&ae.dataset.st!==undefined?ae.dataset.st+'|'+ae.dataset.f:null;
   $('#scroll').innerHTML=h;
@@ -843,7 +954,7 @@ function drawChart(){
   chartObj=new Chart(cv,{type:t==='hbar'?'bar':t,data:{labels,datasets:[{label,data,backgroundColor:pie?['#25d366','#e53935','#f59e0b']:'#128c7e',borderColor:'#128c7e',tension:.3}]},options:{indexAxis:t==='hbar'?'y':'x',responsive:true,plugins:{legend:{display:pie}},scales:pie?{}:{y:{beginAtZero:true}}}});
 }
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat','xExam','shExam','xRosterAll','xRosterCls','sendSel','xReport','xAbs'];
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat','xExam','shExam','xRosterAll','xRosterCls','sendSel','xReport','xAbs','xTT','saveTT'];
 document.addEventListener('click',async e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
@@ -923,6 +1034,13 @@ document.addEventListener('click',async e=>{
   else if(a==='logout'){localStorage.removeItem(SESS);S.cls=null;S.tab='home';render();}
   else if(a==='xAbs'){xAbsence(curCls(),S.date,false);}
   else if(a==='xExam'){xExam(false);}
+  else if(a==='xTT'){xTT(false);}
+  else if(a==='saveTT'){
+    const rows=$('#ttTxt').value.split('\n').map(l=>l.split('|').map(x=>x.trim())).filter(a=>a.length>=3&&a[0]&&a[1]&&a[2]);
+    SET.tt=rows.map(a=>({d:a[0],s:a[1],c:a[2],m:a[3]||'',r:a[4]||''}));
+    try{localStorage.setItem(SKEY,JSON.stringify(SET));}catch(e){}
+    alert('تم حفظ الجدول');render();
+  }
   else if(a==='shExam'){const c=curCls();if(!c)return alert('أضف قسما أولا');xExam(true,textFor(c));}
   else if(a==='saveLink'){
     const u=$('#bLink').value.trim();
