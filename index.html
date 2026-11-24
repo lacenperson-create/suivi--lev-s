@@ -558,7 +558,7 @@ function viewTT(){
   const body=DAYS.map(d=>`<tr><td><b>${d}</b></td>${sl.map(s=>`<td>${SET.tt.filter(x=>x.d===d&&x.s===s).map(x=>`<div><b>${esc(x.c)}</b><br><span class="muted">${esc(x.m)} · ${esc(x.r)}</span></div>`).join('')}</td>`).join('')}</tr>`).join('');
   const txt=SET.tt.map(x=>[x.d,x.s,x.c,x.m,x.r].join(' | ')).join('\n');
   return `${SET.tt.length?'':'<div class="sec"><button class="btn" data-act="loadTT">تعبئة بالجدول الأسبوعي المبدئي</button></div>'}<div class="sec"><div class="tablewrap"><table class="tt"><thead>${head}</thead><tbody>${body}</tbody></table></div></div>
-  <div class="sec card3"><h4>تعديل الجدول</h4><p class="note">سطر لكل حصة بهذا الشكل: اليوم | الوقت | القسم | المادة | القاعة</p><textarea id="ttTxt" style="min-height:220px;direction:ltr;text-align:right">${esc(txt)}</textarea><button class="btn" data-act="saveTT">حفظ الجدول</button></div>
+  <div class="sec card3"><h4>تعديل الجدول</h4><p class="note">سطر لكل حصة بهذا الشكل: اليوم | الوقت | القسم | المادة | القاعة</p><textarea id="ttTxt" style="min-height:220px;direction:ltr;text-align:right">${esc(txt)}</textarea><button class="btn" data-act="saveTT">حفظ الجدول</button><button class="btn red" data-act="clearTT">مسح الجدول لأملأه من جديد</button></div>
   <div class="sec"><button class="btn gh" data-act="xTT">تنزيل الجدول</button></div>`;
 }
 function todayHTML(){
@@ -619,7 +619,7 @@ function viewSettings(){
   <div class="sec card3"><h4>معامل المعدل</h4><p class="note">نسب تقريبية، يُعاد حسابها تلقائيا حتى لو لم يكن مجموعها 100.</p>${f('sDev','الفروض (%)',SET.w.devoir,'number','min="0" max="100"')}${f('sCah','تصحيح الدفتر (%)',SET.w.cahier,'number','min="0" max="100"')}${f('sPart','المشاركة (%)',SET.w.participation,'number','min="0" max="100"')}${f('sComp','السلوك (%)',SET.w.comportement,'number','min="0" max="100"')}</div>
   <div class="sec card3"><h4>التنبيهات</h4>${f('sPass','حد النجاح من 20',SET.pass,'number','min="0" max="20" step="0.5"')}${f('sAbs','تنبيه عند عدد غيابات يساوي أو يفوق',SET.abs,'number','min="1"')}</div>
   <div class="sec card3"><h4>المظهر</h4><label>المظهر<select id="sTheme"><option value="auto" ${SET.theme==='auto'?'selected':''}>تلقائي حسب الهاتف</option><option value="light" ${SET.theme==='light'?'selected':''}>فاتح</option><option value="dark" ${SET.theme==='dark'?'selected':''}>داكن</option></select></label></div>
-  <div class="sec"><button class="btn" data-act="saveSet">حفظ الإعدادات</button><button class="btn gh" data-act="resetSet">استعادة الافتراضي</button></div><div class="sec"><button class="btn red" data-act="logout">تسجيل الخروج</button></div>
+  <div class="sec"><button class="btn" data-act="saveSet">حفظ الإعدادات</button><button class="btn gh" data-act="purgeTT">حذف الجدول من الرابط المشترك</button><button class="btn gh" data-act="resetSet">استعادة الافتراضي</button></div><div class="sec"><button class="btn red" data-act="logout">تسجيل الخروج</button></div>
   <div class="sec note" style="text-align:center;padding:16px">الإصدار 2.0 · الإعدادات محفوظة على هذا الجهاز</div>`;
 }
 function viewExport(){
@@ -1003,7 +1003,7 @@ function drawChart(){
   chartObj=new Chart(cv,{type:t==='hbar'?'bar':t,data:{labels,datasets:[{label,data,backgroundColor:pie?['#25d366','#e53935','#f59e0b']:'#128c7e',borderColor:'#128c7e',tension:.3}]},options:{indexAxis:t==='hbar'?'y':'x',responsive:true,plugins:{legend:{display:pie}},scales:pie?{}:{y:{beginAtZero:true}}}});
 }
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat','xExam','shExam','xRosterAll','xRosterCls','sendSel','xReport','xAbs','xTT','saveTT','backupX'];
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat','xExam','shExam','xRosterAll','xRosterCls','sendSel','xReport','xAbs','xTT','saveTT','backupX','purgeTT'];
 document.addEventListener('click',async e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
@@ -1086,6 +1086,16 @@ document.addEventListener('click',async e=>{
   else if(a==='xTT'){xTT(false);}
   else if(a==='backupX'){backupX();}
   else if(a==='restoreX'){importMode='restore';fileIn.click();}
+  else if(a==='purgeTT'){
+    if(!db) return alert('هذه الخاصية تعمل من رابط claude.ai فقط');
+    if(!confirm('حذف أي جدول محفوظ في الرابط المشترك؟ جدولك على هذا الجهاز لن يتأثر.')) return;
+    try{ await db.doc('timetable/main').delete(); alert('تم حذف الجدول من الرابط المشترك'); }
+    catch(e){ alert('تعذر الحذف: '+(e.message||e)); }
+  }
+  else if(a==='clearTT'){
+    if(!confirm('مسح الجدول كله على هذا الجهاز؟')) return;
+    SET.tt=[];persistTT();render();
+  }
   else if(a==='loadTT'){SET.tt=TT0.map(([d,s,c,m,r])=>({d,s,c,m,r}));persistTT();render();}
   else if(a==='saveTT'){
     const rows=$('#ttTxt').value.split('\n').map(l=>l.split('|').map(x=>x.trim())).filter(a=>a.length>=3&&a[0]&&a[1]&&a[2]);
