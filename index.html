@@ -205,6 +205,7 @@ a{color:var(--g2)}
 #logo{height:38px;max-width:140px;object-fit:contain;border-radius:6px}
 #banner{display:block;width:100%;max-height:120px;object-fit:contain;background:#fff;padding:8px 0;flex:none}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
+.ck{display:flex;gap:8px;align-items:center;margin:8px 0}.ck input{width:auto}
 </style>
 </head>
 <body>
@@ -292,9 +293,17 @@ function classStats(c){
 }
 
 /* ---------- views ---------- */
+function dashHTML(){
+  const ks=Object.keys(roster),all=ks.reduce((a,c)=>a+(roster[c]||[]).length,0);
+  const pr=recs.filter(r=>r.type==='presence'),pp=pr.filter(r=>r.value==='p').length,ab=pr.filter(r=>r.value==='a').length;
+  const beh=recs.filter(r=>r.type==='comportement'),bav=beh.length?beh.reduce((a,r)=>a+r.value,0)/beh.length:null;
+  const gr=recs.filter(r=>r.type==='devoir'||r.type==='cahier'),gav=gr.length?gr.reduce((a,r)=>a+r.value,0)/gr.length:null;
+  const card=(v,l)=>`<div class="card2"><b>${v}</b><span>${l}</span></div>`;
+  return `<div class="cards" style="padding:12px 14px 0">${card(ks.length,'عدد الأقسام')}${card(all,'عدد التلاميذ')}${card(pr.length?Math.round(pp/pr.length*100)+'%':'—','نسبة الحضور')}${card(ab,'الغيابات')}${card(bav===null?'—':bav.toFixed(1)+'/5','متوسط السلوك')}${card(gav===null?'—':gav.toFixed(1)+'/20','متوسط النقط')}</div>`;
+}
 function viewHome(){
   const ks=Object.keys(roster);
-  const intro=`<div class="sec"><div class="greet">${esc(SET.teacher?'مرحبا، '+SET.teacher:'مرحبا بك')}</div><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><div class="row2"><button class="btn" data-act="importHome">استيراد لائحة من Excel</button><button class="btn gh" data-act="xRoster">تصدير اللائحة (Excel)</button></div><div class="row2"><button class="btn gh" data-act="tplX">تنزيل نموذج Excel</button></div></div>`;
+  const intro=dashHTML()+`<div class="sec"><div class="greet">${esc(SET.teacher?'مرحبا، '+SET.teacher:'مرحبا بك')}</div><div class="muted">أضف قسما، أو استورد لائحة كاملة من ملف Excel بدل كتابة التلاميذ واحدا واحدا.</div><div class="row2"><button class="btn" data-act="importHome">استيراد لائحة من Excel</button><button class="btn gh" data-act="xRoster">تصدير اللائحة (Excel)</button></div><div class="row2"><button class="btn gh" data-act="tplX">تنزيل نموذج Excel</button></div></div>`;
   if(!ks.length) return intro+`<div class="empty">لا توجد أقسام بعد.</div>`;
   return intro+ks.map(c=>{const cs=classStats(c);return `<div class="item" data-act="open" data-cls="${esc(c)}"><div class="av ${cs.avg===null?'':cs.avg>=SET.pass?'ok':'bad'}">${esc(c.slice(0,2))}</div><div class="grow"><div class="name">${esc(c)}</div><div class="sub">${cs.count} تلميذ · الحضور ${cs.att===null?'—':cs.att+'%'}</div></div></div>`;}).join('');
 }
@@ -310,6 +319,131 @@ function viewClass(){
     return `<div class="item" data-act="student" data-name="${esc(n)}"><div class="av ${s.tot===null?'':s.tot>=SET.pass?'ok':'bad'}">${esc(n.charAt(0))}</div><div class="grow"><div class="name">${esc(n)}</div><div class="sub">${sub}</div></div>${b}</div>`;
   }).join('');
   return tools+rows+`<div class="sec"><button class="btn red" data-act="delclass" data-cls="${esc(S.cls)}">حذف القسم</button></div>`;
+}
+function headDoc(title,body){
+  return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><style>
+@page{size:A4;margin:12mm}
+body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0;padding:6px}
+.hd{text-align:center;margin-bottom:12px}
+.hd img{max-height:150px;max-width:100%;display:block;margin:0 auto 8px}
+h1{font-size:20px;margin:4px 0}
+h3{margin:14px 0 6px;color:#0b7a6e;font-size:15px}
+.meta{font-size:13px;color:#444}
+.muted{color:#6b7280;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{border:1px solid #888;padding:6px;text-align:center}
+th{background:#e8f3ef}
+tr.moy td{background:#fff7e6;font-weight:700}
+.box{border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-top:12px}
+.k{display:inline-block;margin:4px 12px 4px 0;padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px}
+.k b{color:#0b7a6e}
+</style></head><body>
+<div class="hd">${SET.logo?`<img src="${SET.logo}" alt="">`:''}<h1>${esc(title)}</h1><div class="meta">${esc(SET.school||'')} ${SET.teacher?'· '+esc(SET.teacher):''} ${SET.year?'· '+esc(SET.year):''}</div></div>
+${body}
+<p class="muted" style="margin-top:14px">تاريخ: ${new Date().toLocaleDateString('ar-MA')}</p>
+</body></html>`;
+}
+const fxn=(x,t)=>x===null?'—':+(x*MAX[t]).toFixed(1);
+function buildXlsx(sheets){
+  const wb=XLSX.utils.book_new();
+  sheets.forEach(([n,a])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),n));
+  return XLSX.write(wb,{bookType:'xlsx',type:'array'});
+}
+async function toPdf(html){
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const box=document.createElement('div');
+  box.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1';
+  box.innerHTML='<style>'+(doc.querySelector('style')?doc.querySelector('style').textContent:'')+'</style>'+doc.body.innerHTML;
+  document.body.appendChild(box);
+  try{
+    return await window.html2pdf().set({margin:10,image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(box).outputPdf('arraybuffer');
+  }finally{box.remove();}
+}
+async function deliver(base,html,sheets,share,text){
+  try{
+    const f=S.fmt||'pdf';
+    if(f==='excel'){
+      if(!sheets) return alert('هذا الملف غير متوفر بصيغة Excel');
+      if(!window.XLSX) return alert('مكتبة Excel غير متاحة، تحقق من الاتصال');
+      const b=buildXlsx(sheets);
+      return share?shareFile(base+'.xlsx',b,text):saveFile(base+'.xlsx',b);
+    }
+    if(f==='word') return share?shareFile(base+'.doc',html,text):saveFile(base+'.doc',html);
+    const b=await toPdf(html);
+    return share?shareFile(base+'.pdf',b,text):saveFile(base+'.pdf',b);
+  }catch(e){ alert('تعذر إنشاء الملف: '+(e.message||e)); }
+}
+function weekStart(d){const x=new Date(d+'T00:00:00');x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10);}
+function weeklyAbs(c){
+  const wk={};
+  recs.filter(r=>r.cls===c&&r.type==='presence'&&r.value==='a').forEach(r=>{const k=weekStart(r.date);wk[k]=(wk[k]||0)+1;});
+  return Object.keys(wk).sort().map(k=>[k,wk[k]]);
+}
+function absBlocks(c){
+  const top=(roster[c]||[]).map(n=>({n,ab:stats(c,n).ab})).sort((a,b)=>b.ab-a.ab).filter(x=>x.ab>0).slice(0,5);
+  const t=top.length?`<table><thead><tr><th>التلميذ</th><th>عدد الغيابات</th></tr></thead><tbody>${top.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.ab}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">لا توجد غيابات مسجلة</p>';
+  const wk=weeklyAbs(c);
+  const w=wk.length?`<table><thead><tr><th>أسبوع يبدأ يوم</th><th>عدد الغيابات</th></tr></thead><tbody>${wk.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">لا توجد بيانات أسبوعية</p>';
+  return `<h3>التلاميذ الأكثر غيابا</h3>${t}<h3>الغياب الأسبوعي (مادة الرياضيات)</h3>${w}`;
+}
+function chartSVG(ct,ss,cs){
+  const W=640,H=300;
+  const valid=ss.filter(x=>x.tot!==null);
+  if(ct==='pie'){
+    const lv=[['ممتاز (16 فما فوق)',v=>v>=16,'#0b7a6e'],['جيد (12 إلى 16)',v=>v>=12&&v<16,'#16a34a'],['مقبول',v=>v>=SET.pass&&v<12,'#f59e0b'],['دون الحد',v=>v<SET.pass,'#b91c1c']];
+    const cnt=lv.map(l=>valid.filter(s=>l[1](s.tot)).length);
+    const tot=cnt.reduce((a,b)=>a+b,0)||1;
+    let a0=-Math.PI/2,paths='',legend='';
+    lv.forEach((l,i)=>{
+      const a1=a0+cnt[i]/tot*2*Math.PI,cx=170,cy=150,r=120;
+      if(cnt[i]>0){
+        const x1=cx+r*Math.cos(a0),y1=cy+r*Math.sin(a0),x2=cx+r*Math.cos(a1),y2=cy+r*Math.sin(a1);
+        paths+=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${(a1-a0)>Math.PI?1:0} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${l[2]}"/>`;
+      }
+      legend+=`<rect x="380" y="${60+i*34}" width="16" height="16" fill="${l[2]}"/><text x="404" y="${74+i*34}" font-size="14">${l[0]}: ${cnt[i]}</text>`;
+      a0=a1;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%">${paths}${legend}</svg>`;
+  }
+  const n=ss.length||1,pad=40,gap=(W-pad*2)/n,bw=Math.min(40,gap*0.6);
+  const y=v=>H-40-(v/20)*(H-70);
+  const pts=ss.map((x,i)=>({x:pad+i*gap+gap/2,v:x.tot===null?0:x.tot,t:x.tot,n:x.n}));
+  let body;
+  if(ct==='line'){
+    body=`<polyline fill="none" stroke="#0b7a6e" stroke-width="3" points="${pts.map(p=>p.x.toFixed(1)+','+y(p.v).toFixed(1)).join(' ')}"/>`+pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" fill="#0b7a6e"/><text x="${p.x.toFixed(1)}" y="${(y(p.v)-8).toFixed(1)}" font-size="11" text-anchor="middle">${p.t===null?'—':p.t.toFixed(1)}</text>`).join('');
+  }else{
+    body=pts.map(p=>`<rect x="${(p.x-bw/2).toFixed(1)}" y="${y(p.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H-40-y(p.v)).toFixed(1)}" rx="4" fill="${p.t!==null&&p.t<SET.pass?'#b91c1c':'#0b7a6e'}"/><text x="${p.x.toFixed(1)}" y="${(y(p.v)-5).toFixed(1)}" font-size="11" text-anchor="middle">${p.t===null?'—':p.t.toFixed(1)}</text>`).join('');
+  }
+  const labels=pts.map(p=>`<text x="${p.x.toFixed(1)}" y="${H-22}" font-size="10" text-anchor="end" transform="rotate(-35 ${p.x.toFixed(1)} ${H-22})">${esc(p.n)}</text>`).join('');
+  const grid=[0,5,10,15,20].map(v=>`<line x1="${pad}" x2="${W-pad}" y1="${y(v)}" y2="${y(v)}" stroke="#e5e7eb"/><text x="${pad-6}" y="${y(v)+4}" font-size="10" text-anchor="end" fill="#6b7280">${v}</text>`).join('');
+  const avg=cs.avg===null?'':`<line x1="${pad}" x2="${W-pad}" y1="${y(cs.avg)}" y2="${y(cs.avg)}" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 4"/><text x="${W-pad}" y="${(y(cs.avg)-6).toFixed(1)}" font-size="11" fill="#b45309" text-anchor="end">Valeur moyenne ${cs.avg.toFixed(1)}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%">${grid}${body}${labels}${avg}</svg>`;
+}
+function rosterHTML(list){
+  const max=Math.max(0,...list.map(x=>x[1].length));
+  const th=list.map(x=>`<th>${esc(x[0])}</th>`).join('');
+  const trs=Array.from({length:max},(_,i)=>`<tr><td>${i+1}</td>${list.map(x=>`<td>${esc(x[1][i]||'')}</td>`).join('')}</tr>`).join('');
+  return headDoc('لائحة التلاميذ',`<table><thead><tr><th>#</th>${th}</tr></thead><tbody>${trs}</tbody></table>`);
+}
+function reportHTML(c,withStats,ct){
+  const cs=classStats(c),ss=cs.ss,n=ss.length||1;
+  const mean=a=>{const v=a.filter(x=>x!==null);return v.length?v.reduce((p,x)=>p+x,0)/v.length:null;};
+  const cav={};['devoir','cahier','participation','comportement'].forEach(t=>cav[t]=mean(ss.map(x=>x.v[t])));
+  const rows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.ab}</td><td>${x.re}</td><td>${fxn(x.v.devoir,'devoir')}</td><td>${fxn(x.v.cahier,'cahier')}</td><td>${fxn(x.v.participation,'participation')}</td><td>${fxn(x.v.comportement,'comportement')}</td><td><b>${x.tot===null?'—':x.tot.toFixed(1)}</b></td></tr>`).join('');
+  const avgRow=`<tr class="moy"><td>Valeur moyenne / القيمة المتوسطة</td><td>${(cs.ab/n).toFixed(1)}</td><td>${(cs.re/n).toFixed(1)}</td><td>${fxn(cav.devoir,'devoir')}</td><td>${fxn(cav.cahier,'cahier')}</td><td>${fxn(cav.participation,'participation')}</td><td>${fxn(cav.comportement,'comportement')}</td><td><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b></td></tr>`;
+  const table=`<table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}${avgRow}</tbody></table>`;
+  const stats=`<div><span class="k">عدد التلاميذ <b>${cs.count}</b></span><span class="k">نسبة الحضور <b>${cs.att===null?'—':cs.att+'%'}</b></span><span class="k">Valeur moyenne <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></span><span class="k">دون ${SET.pass}/20 <b>${cs.risk}</b></span></div><h3>المخطط</h3><div class="box">${chartSVG(ct,ss,cs)}</div>${absBlocks(c)}`;
+  return headDoc('تقرير القسم '+c,table+(withStats?stats:''));
+}
+function examRows(c,lab){
+  return (roster[c]||[]).map(n=>{const r=recs.filter(x=>x.cls===c&&x.student===n&&x.type==='devoir'&&x.label===lab).sort(sortDate).pop();return {n,v:r?r.value:null,d:r?r.date:'—'};});
+}
+function examAvg(rows){const v=rows.map(x=>x.v).filter(x=>x!==null);return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):'—';}
+function examHTML(c,lab){
+  const rows=examRows(c,lab),avg=examAvg(rows);
+  const tb=`<table><thead><tr><th>التلميذ</th><th>العلامة /20</th><th>التاريخ</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.v===null?'—':x.v}</td><td>${x.d}</td></tr>`).join('')}<tr class="moy"><td>Valeur moyenne / القيمة المتوسطة</td><td>${avg}</td><td></td></tr></tbody></table>`;
+  return headDoc(lab+' - القسم '+c,tb);
 }
 function viewBulk(){
   const st=roster[S.cls]||[];
@@ -343,7 +477,7 @@ function viewStats(){
   return `<div class="sec"><select data-ctl="statcls">${ks.map(k=>`<option ${k===c?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
   <div class="cards"><div class="card2"><b>${cs.count}</b><span>تلميذ</span></div><div class="card2"><b>${cs.att===null?'—':cs.att+'%'}</b><span>نسبة الحضور</span></div><div class="card2"><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b><span>متوسط القسم /20</span></div><div class="card2"><b>${cs.risk}</b><span>دون 10/20</span></div><div class="card2"><b>${cs.ab}</b><span>غيابات</span></div><div class="card2"><b>${cs.re}</b><span>تأخرات</span></div><div class="card2"><b>${cs.ss.filter(x=>x.ab>=SET.abs).length}</b><span>غياب مرتفع</span></div></div>
   <div class="sec card3"><div class="row2"><select data-ctl="ctype">${[['bar','أعمدة'],['hbar','أعمدة أفقية'],['line','خطي'],['pie','دائري'],['doughnut','حلقي']].map(o=>`<option value="${o[0]}" ${S.ctype===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select><select data-ctl="cmetric"><option value="avg" ${S.cmetric==='avg'?'selected':''}>المعدلات</option><option value="att" ${S.cmetric==='att'?'selected':''}>الغياب</option></select></div><canvas id="chartC" style="margin-top:10px;max-height:320px"></canvas></div>
-  <div class="sec lbl">المعدل لكل تلميذ</div>${bars||'<div class="empty">لا تلاميذ</div>'}`;
+  <div class="sec lbl">المعدل لكل تلميذ</div>${bars||'<div class="empty">لا تلاميذ</div>'}${absBlocks(c)}`;
 }
 function viewAuth(){
   const f=(id,l,t)=>`<label>${l}<input id="${id}" type="${t||'text'}"></label>`;
@@ -366,23 +500,31 @@ function viewSettings(){
   <div class="sec note" style="text-align:center;padding:16px">الإصدار 2.0 · الإعدادات محفوظة على هذا الجهاز</div>`;
 }
 function viewExport(){
-  const cc=curCls();
-  const labs=[...new Set(recs.filter(r=>r.cls===cc&&r.type==='devoir').map(r=>r.label))].filter(Boolean);
-  const examOpts=labs.length?labs.map(l=>`<option>${esc(l)}</option>`).join(''):'<option value="">لا توجد فروض بعد</option>';
-  const ks=Object.keys(roster);
+  const cc=curCls(),ks=Object.keys(roster);
   if(!ks.length) return `<div class="empty">لا توجد بيانات لتصديرها بعد.</div>`;
-  const c=curCls();
-  return `<div class="sec"><select data-ctl="statcls">${ks.map(k=>`<option ${k===c?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
-  <div class="sec lbl">لائحة التلاميذ</div>
-  <div class="sec"><button class="btn" data-act="xRoster">لائحة كل الأقسام (Excel)</button><button class="btn gh" data-act="xClassRoster">لائحة ${esc(c)} (Excel)</button></div>
-  <div class="sec lbl">الحصيلة والتقارير</div>
-  <div class="sec"><button class="btn" data-act="xStats">حصيلة ${esc(c)} (Excel، عدة أوراق)</button><button class="btn gh" data-act="xReport">تقرير ${esc(c)} (HTML للطباعة)</button></div>
-  <div class="sec lbl">إرسال عبر واتساب</div>
-  <div class="sec"><button class="btn" data-act="shStats">إرسال حصيلة القسم</button><button class="btn gh" data-act="shAbs">إرسال الغياب اليومي</button></div>
-  <div class="sec lbl">الغياب والنتائج</div>
-  <div class="sec"><button class="btn" data-act="xAbs">ملف الغياب اليومي (PDF)</button></div>
-  <div class="sec card3"><h4>تصدير نقط الفروض</h4><p class="note">اختر الفرض (الفرض 1 أو 2 أو 3...) ثم صدّر نقطه لكل التلاميذ.</p><select id="expLabel">${examOpts}</select><div class="row2"><button class="btn" data-act="xExam">تصدير نقط الفرض (Excel)</button><button class="btn gh" data-act="shExam">إرسال عبر واتساب</button></div></div>
-  <div class="sec"><p class="muted">التقرير ملف HTML: افتحه بعد التنزيل ثم اختر طباعة أو حفظ كـ PDF.</p></div>`;
+  const labs=[...new Set(recs.filter(r=>r.cls===cc&&r.type==='devoir').map(r=>r.label))].filter(Boolean);
+  const exSel=labs.length?labs.map(l=>`<option ${l===S.exLab?'selected':''}>${esc(l)}</option>`).join(''):'<option value="">لا توجد فروض بعد</option>';
+  const fm=f=>S.fmt===f||(!S.fmt&&f==='pdf')?'selected':'';
+  const chk=v=>(S.sendSel||[]).includes(v)?'checked':'';
+  const lineSel=v=>`<label class="ck"><input class="sendc" type="checkbox" value="${v}" ${chk(v)}> `;
+  return `<div class="sec"><select data-ctl="statcls">${ks.map(k=>`<option ${k===cc?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
+  <div class="sec card3"><h4>إعدادات الملفات</h4>
+    <label>الصيغة<select id="fmt"><option value="pdf" ${fm('pdf')}>PDF</option><option value="word" ${fm('word')}>Word</option><option value="excel" ${fm('excel')}>Excel</option></select></label>
+    <label>نوع المخطط في التقرير<select id="rchart"><option value="bar" ${S.rchart==='bar'||!S.rchart?'selected':''}>أعمدة</option><option value="pie" ${S.rchart==='pie'?'selected':''}>دائرية</option><option value="line" ${S.rchart==='line'?'selected':''}>خطية</option></select></label>
+    <label class="ck"><input id="withStats" type="checkbox" ${S.wstats!==false?'checked':''}> إضافة الإحصائيات إلى التقرير</label>
+  </div>
+  <div class="sec lbl">تنزيل</div>
+  <div class="sec row2"><button class="btn" data-act="xRosterAll">لائحة كل الأقسام</button><button class="btn gh" data-act="xRosterCls">لائحة ${esc(cc)}</button></div>
+  <div class="sec row2"><button class="btn" data-act="xReport">تقرير ${esc(cc)}</button><button class="btn gh" data-act="xAbs">الغياب اليومي</button></div>
+  <div class="sec card3"><h4>نقط الفروض</h4><select id="expLabel">${exSel}</select><button class="btn" data-act="xExam">تنزيل نقط الفرض</button></div>
+  <div class="sec lbl">إرسال عبر واتساب (PDF)</div>
+  <div class="sec card3"><h4>اختر الملفات</h4>
+    ${lineSel('roster')} لائحة القسم</label>
+    ${lineSel('report')} تقرير القسم</label>
+    ${lineSel('absence')} الغياب اليومي</label>
+    ${lineSel('exam')} نقط الفرض المختار</label>
+    <button class="btn" data-act="sendSel">إرسال المحدد عبر واتساب</button>
+  </div>`;
 }
 
 /* ---------- sheet (تلميذ واحد) ---------- */
@@ -422,7 +564,7 @@ async function saveFile(filename,data){
   setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
 }
 async function shareFile(filename,data,text){
-  const type=filename.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':filename.endsWith('.pdf')?'application/pdf':'text/html';
+  const type=filename.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':filename.endsWith('.pdf')?'application/pdf':filename.endsWith('.doc')?'application/msword':'text/html';
   const file=new File([data],filename,{type});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({files:[file],title:filename,text});return;}
@@ -444,10 +586,11 @@ async function xlsxSave(filename,sheets){
   await saveFile(filename,buf);
 }
 function xRoster(cls){
-  const aoa=[['القسم','التلميذ']];
-  (cls?[cls]:Object.keys(roster)).forEach(c=>(roster[c]||[]).forEach(n=>aoa.push([c,n])));
-  if(aoa.length===1) return alert('لا يوجد تلاميذ لتصديرهم');
-  xlsxSave(cls?'liste-'+cls+'.xlsx':'liste-eleves.xlsx',[['اللائحة',aoa]]);
+  const list=(cls?[cls]:Object.keys(roster)).map(c=>[c,roster[c]||[]]);
+  if(!list.some(x=>x[1].length)) return alert('لا يوجد تلاميذ لتصديرهم');
+  const max=Math.max(...list.map(x=>x[1].length));
+  const sheet=[list.map(x=>x[0])].concat(Array.from({length:max},(_,i)=>list.map(x=>x[1][i]||'')));
+  deliver(cls?'لائحة-'+cls:'لائحة-كل-الأقسام',rosterHTML(list),[['اللائحة',sheet]],false);
 }
 function xStats(c){
   const cs=classStats(c);
@@ -456,45 +599,14 @@ function xStats(c){
   const s3=[['التاريخ','التلميذ','النوع','الاسم','العلامة /20']].concat(recs.filter(r=>r.cls===c&&(r.type==='devoir'||r.type==='cahier')).sort(sortDate).map(r=>[r.date,r.student,TN[r.type],r.label,r.value]));
   xlsxSave('حصيلة-'+c+'.xlsx',[['الحصيلة',s1],['الغياب',s2],['العلامات',s3]]);
 }
-function xReport(c){
-  const withStats=confirm('هل تريد إضافة الإحصائيات (المخطط وملخص الأرقام) إلى التقرير؟\n\nموافق: مع الإحصائيات\nإلغاء: جدول التلاميذ فقط');
-  const cs=classStats(c),ss=cs.ss,n=ss.length||1;
-  const mean=a=>{const v=a.filter(x=>x!==null);return v.length?v.reduce((p,x)=>p+x,0)/v.length:null;};
-  const cav={};['devoir','cahier','participation','comportement'].forEach(t=>cav[t]=mean(ss.map(x=>x.v[t])));
-  const fx=(x,t)=>x===null?'—':(x*MAX[t]).toFixed(1);
-  const W=640,H=300,pad=40,gap=(W-pad*2)/n,bw=Math.min(40,gap*0.6);
-  const y=v=>H-40-(v/20)*(H-70);
-  const bars=ss.map((x,i)=>{
-    const v=x.tot===null?0:x.tot,bx=pad+i*gap+(gap-bw)/2,cx=(bx+bw/2).toFixed(1);
-    return `<rect x="${bx.toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H-40-y(v)).toFixed(1)}" rx="4" fill="${x.tot!==null&&x.tot<SET.pass?'#b91c1c':'#0b7a6e'}"/><text x="${cx}" y="${(y(v)-5).toFixed(1)}" font-size="11" text-anchor="middle">${x.tot===null?'—':x.tot.toFixed(1)}</text><text x="${cx}" y="${H-22}" font-size="10" text-anchor="end" transform="rotate(-35 ${cx} ${H-22})">${esc(x.n)}</text>`;
-  }).join('');
-  const grid=[0,5,10,15,20].map(v=>`<line x1="${pad}" x2="${W-pad}" y1="${y(v)}" y2="${y(v)}" stroke="#e5e7eb"/><text x="${pad-6}" y="${y(v)+4}" font-size="10" text-anchor="end" fill="#6b7280">${v}</text>`).join('');
-  const avgLine=cs.avg===null?'':`<line x1="${pad}" x2="${W-pad}" y1="${y(cs.avg)}" y2="${y(cs.avg)}" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 4"/><text x="${W-pad}" y="${(y(cs.avg)-6).toFixed(1)}" font-size="11" fill="#b45309" text-anchor="end">Valeur moyenne ${cs.avg.toFixed(1)}</text>`;
-  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="histogramme des moyennes">${grid}${bars}${avgLine}</svg>`;
-  const rows=ss.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.ab}</td><td>${x.re}</td><td>${fx(x.v.devoir,'devoir')}</td><td>${fx(x.v.cahier,'cahier')}</td><td>${fx(x.v.participation,'participation')}</td><td>${fx(x.v.comportement,'comportement')}</td><td><b>${x.tot===null?'—':x.tot.toFixed(1)}</b></td></tr>`).join('');
-  const avgRow=`<tr class="moy"><td>Valeur moyenne / القيمة المتوسطة</td><td>${(cs.ab/n).toFixed(1)}</td><td>${(cs.re/n).toFixed(1)}</td><td>${fx(cav.devoir,'devoir')}</td><td>${fx(cav.cahier,'cahier')}</td><td>${fx(cav.participation,'participation')}</td><td>${fx(cav.comportement,'comportement')}</td><td><b>${cs.avg===null?'—':cs.avg.toFixed(1)}</b></td></tr>`;
-  const statsBlock=!withStats?'':`<div class="kpis"><span class="k">عدد التلاميذ <b>${cs.count}</b></span><span class="k">نسبة الحضور <b>${cs.att===null?'—':cs.att+'%'}</b></span><span class="k">Valeur moyenne / المتوسط <b>${cs.avg===null?'—':cs.avg.toFixed(1)}/20</b></span><span class="k">دون ${SET.pass}/20 <b>${cs.risk}</b></span></div><div class="box"><h3 style="margin:0 0 6px">معدلات التلاميذ (أعمدة)</h3>${svg}</div>`;
-  const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير ${esc(c)}</title><style>
-body{font-family:Tahoma,Arial,sans-serif;margin:24px;color:#111}
-h1{font-size:22px;margin:6px 0}
-.head{text-align:center;margin-bottom:16px}
-.head img{max-height:160px;max-width:100%;display:block;margin:0 auto 12px}
-.k{display:inline-block;margin:4px 14px 4px 0;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px}
-.k b{font-size:18px;color:#0b7a6e}
-.kpis{margin-top:16px}
-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
-th,td{border:1px solid #d1d5db;padding:6px;text-align:center}
-th{background:#e8f3ef}
-tr.moy td{background:#fff7e6;font-weight:700}
-.box{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:14px}
-@media print{body{margin:12mm}.box,table{break-inside:avoid}}
-</style></head><body>
-<div class="head">${SET.logo?`<img src="${SET.logo}" alt="">`:''}<h1>تقرير القسم ${esc(c)}</h1><p>${esc(SET.school||'')} ${esc(SET.teacher?'· '+SET.teacher:'')} ${esc(SET.year?'· '+SET.year:'')}</p></div>
-<table><thead><tr><th>التلميذ</th><th>غياب</th><th>تأخر</th><th>فروض /20</th><th>دفتر /20</th><th>مشاركة /5</th><th>سلوك /5</th><th>المعدل /20</th></tr></thead><tbody>${rows}${avgRow}</tbody></table>
-${statsBlock}
-<p style="color:#6b7280;font-size:12px;margin-top:16px">تاريخ التقرير: ${new Date().toLocaleDateString('ar-MA')}</p>
-</body></html>`;
-  saveFile('تقرير-'+c+'.html',html);
+function xReport(share,text){
+  const c=curCls(); if(!c) return alert('أضف قسما أولا');
+  const cs=classStats(c),n=cs.ss.length||1;
+  const cav={};['devoir','cahier','participation','comportement'].forEach(t=>{const v=cs.ss.map(x=>x.v[t]).filter(x=>x!==null);cav[t]=v.length?v.reduce((a,b)=>a+b,0)/v.length:null;});
+  const row=x=>[x.n,x.ab,x.re,fxn(x.v.devoir,'devoir'),fxn(x.v.cahier,'cahier'),fxn(x.v.participation,'participation'),fxn(x.v.comportement,'comportement'),x.tot===null?'—':+x.tot.toFixed(1)];
+  const avgR=['Valeur moyenne / القيمة المتوسطة',+(cs.ab/n).toFixed(1),+(cs.re/n).toFixed(1),fxn(cav.devoir,'devoir'),fxn(cav.cahier,'cahier'),fxn(cav.participation,'participation'),fxn(cav.comportement,'comportement'),cs.avg===null?'—':+cs.avg.toFixed(1)];
+  const sheet=[['التلميذ','غياب','تأخر','فروض /20','دفتر /20','مشاركة /5','سلوك /5','المعدل /20']].concat(cs.ss.map(row),[avgR]);
+  deliver('تقرير-'+c,reportHTML(c,S.wstats!==false,S.rchart||'bar'),[['الحصيلة',sheet]],share,text);
 }
 
 function printHTML(html,fname){
@@ -557,22 +669,17 @@ async function shareAbsPdf(c,d,text){
     alert('تعذر إنشاء PDF: '+(e.message||e));
   }finally{ if(box) box.remove(); }
 }
-function xExam(){
-  const c=curCls(), lab=($('#expLabel')||{}).value||'';
-  if(!c||!lab){SHARE_TEXT=null;return alert('لا يوجد فرض مختار، أضف علامات فرض أولا');}
-  const rows=(roster[c]||[]).map(n=>{
-    const r=recs.filter(x=>x.cls===c&&x.student===n&&x.type==='devoir'&&x.label===lab).sort(sortDate).pop();
-    return {n,v:r?r.value:null,d:r?r.date:'—'};
-  });
-  const nums=rows.map(x=>x.v).filter(v=>v!==null);
-  const avg=nums.length?(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(1):'—';
-  const aoa=[['التلميذ','العلامة /20','التاريخ']].concat(rows.map(x=>[x.n,x.v===null?'—':x.v,x.d]),[['Valeur moyenne / القيمة المتوسطة',avg,'']]);
-  const sheet=lab.replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31);
-  xlsxSave('نقط-'+lab+'-'+c+'.xlsx',[[sheet,aoa]]);
+function xExam(share,text){
+  const c=curCls(), lab=(($('#expLabel')||{}).value)||S.exLab||'';
+  if(!c||!lab) return alert('لا يوجد فرض مختار، أضف علامات فرض أولا');
+  const rows=examRows(c,lab);
+  const sheet=[['التلميذ','العلامة /20','التاريخ']].concat(rows.map(x=>[x.n,x.v===null?'—':x.v,x.d]),[['Valeur moyenne / القيمة المتوسطة',examAvg(rows),'']]);
+  deliver('نقط-'+lab+'-'+c,examHTML(c,lab),[[lab.replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31),sheet]],share,text);
 }
-function xAbsence(c,d){
-  if(SHARE_TEXT!==null) return xAbsenceXlsx(c,d);
-  printAbsence(c,d);
+function xAbsence(c,d,share,text){
+  const lab={p:'حاضر',a:'غائب',r:'متأخر'};
+  const aoa=[['التلميذ','الحالة']].concat((roster[c]||[]).map(n=>{const p=findRec(c,n,d,'presence','');return [n,p?lab[p.value]:'—'];}));
+  deliver('غياب-'+c+'-'+d,absenceHTML(c,d),[['الغياب',aoa]],share,text);
 }
 function xAbsenceXlsx(c,d){
   const lab={p:'حاضر',a:'غائب',r:'متأخر'};
@@ -610,6 +717,31 @@ async function importResults(wb,mode){
   }
   alert('تم استيراد '+ok+' سطرا'+(bad?'\nتم تجاهل '+bad+' سطر (اسم غير موجود في القسم أو قيمة غير صالحة)':''));
   render();
+}
+async function sendSel(){
+  const c=curCls(); if(!c) return alert('أضف قسما أولا');
+  const want=S.sendSel||[];
+  if(!want.length) return alert('اختر ملفا واحدا على الأقل');
+  const files=[];
+  try{
+    for(const k of want){
+      let html,name;
+      if(k==='roster'){html=rosterHTML([[c,roster[c]||[]]]);name='لائحة-'+c;}
+      else if(k==='report'){html=reportHTML(c,S.wstats!==false,S.rchart||'bar');name='تقرير-'+c;}
+      else if(k==='absence'){html=absenceHTML(c,S.date);name='غياب-'+c+'-'+S.date;}
+      else if(k==='exam'){const lab=S.exLab||(($('#expLabel')||{}).value)||'';if(!lab)continue;html=examHTML(c,lab);name='نقط-'+lab+'-'+c;}
+      if(!html) continue;
+      const b=await toPdf(html);
+      files.push(new File([b],name+'.pdf',{type:'application/pdf'}));
+    }
+    if(!files.length) return alert('لا توجد ملفات لإرسالها');
+    if(navigator.canShare&&navigator.canShare({files})){
+      await navigator.share({files,title:'ملفات '+c,text:textFor(c)});
+    }else{
+      for(const f of files) await saveFile(f.name,f);
+      alert('تم تنزيل الملفات، أرفقها في واتساب');
+    }
+  }catch(e){ if(e.name!=='AbortError') alert('تعذر الإرسال: '+(e.message||e)); }
 }
 function xTemplate(){
   xlsxSave('نموذج-لائحة-التلاميذ.xlsx',[['اللائحة',[['القسم','التلميذ'],['1AC','اسم التلميذ الأول'],['1AC','اسم التلميذ الثاني']]]]);
@@ -705,7 +837,7 @@ function drawChart(){
   chartObj=new Chart(cv,{type:t==='hbar'?'bar':t,data:{labels,datasets:[{label,data,backgroundColor:pie?['#25d366','#e53935','#f59e0b']:'#128c7e',borderColor:'#128c7e',tension:.3}]},options:{indexAxis:t==='hbar'?'y':'x',responsive:true,plugins:{legend:{display:pie}},scales:pie?{}:{y:{beginAtZero:true}}}});
 }
 /* ---------- أحداث ---------- */
-const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat','xExam','shExam'];
+const READ_ACTS=['open','back','close','student','bulkOpen','bulkClose','bt','xRoster','xClassRoster','xStats','xReport','tplX','saveSet','resetSet','xAbs','signup','login','logout','shStats','shAbs','bcat','xExam','shExam','xRosterAll','xRosterCls','sendSel','xReport','xAbs'];
 document.addEventListener('click',async e=>{
   if(e.target.id==='ov'){closeSheet();return;}
   const nb=e.target.closest('.nav button');
@@ -783,9 +915,9 @@ document.addEventListener('click',async e=>{
     localStorage.setItem(SESS,'1');render();
   }
   else if(a==='logout'){localStorage.removeItem(SESS);S.cls=null;S.tab='home';render();}
-  else if(a==='xAbs'){xAbsence(curCls(),S.date);}
-  else if(a==='xExam'){xExam();}
-  else if(a==='shExam'){const c=curCls();if(!c)return alert('أضف قسما أولا');const l=($('#expLabel')||{}).value||'';SHARE_TEXT=textFor(c)+'\nنقط الفرض: '+l;xExam();}
+  else if(a==='xAbs'){xAbsence(curCls(),S.date,false);}
+  else if(a==='xExam'){xExam(false);}
+  else if(a==='shExam'){const c=curCls();if(!c)return alert('أضف قسما أولا');xExam(true,textFor(c));}
   else if(a==='saveLink'){
     const u=$('#bLink').value.trim();
     if(!S.bulkLabel.trim()){alert('اكتب اسم الفرض أولا');return;}
@@ -806,10 +938,13 @@ document.addEventListener('click',async e=>{
     try{localStorage.removeItem(SKEY);}catch(e){}
     SET=JSON.parse(JSON.stringify(DEF));applySettings();render();
   }
+  else if(a==='xRosterAll'){xRoster(null);}
+  else if(a==='xRosterCls'){xRoster(curCls());}
+  else if(a==='sendSel'){sendSel();}
   else if(a==='xRoster'){xRoster(null);}
   else if(a==='xClassRoster'){xRoster(curCls());}
   else if(a==='xStats'){xStats(curCls());}
-  else if(a==='xReport'){xReport(curCls());}
+  else if(a==='xReport'){xReport(false);}
 });
 function focusNext(el){
   const all=[...document.querySelectorAll('#scroll [data-st]')];
@@ -822,6 +957,11 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('change',e=>{
   const c=e.target;
+  if(c.id==='fmt'){S.fmt=c.value;return;}
+  if(c.id==='rchart'){S.rchart=c.value;return;}
+  if(c.id==='withStats'){S.wstats=c.checked;return;}
+  if(c.id==='expLabel'){S.exLab=c.value;return;}
+  if(c.classList&&c.classList.contains('sendc')){S.sendSel=[...document.querySelectorAll('.sendc:checked')].map(x=>x.value);return;}
   if(c.dataset.ctl==='statcls'){S.cls=c.value;render();return;}
   if(c.dataset.ctl==='ctype'){S.ctype=c.value;render();return;}
   if(c.dataset.ctl==='cmetric'){S.cmetric=c.value;render();return;}
